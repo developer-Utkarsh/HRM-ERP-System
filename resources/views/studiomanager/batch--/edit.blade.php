@@ -1,0 +1,214 @@
+@extends('layouts.studiomanager')
+<style type="text/css">
+	.hide {
+		display: none!important;
+	}
+</style>
+@section('content')
+<div class="app-content content">
+	<div class="content-overlay"></div>
+	<div class="header-navbar-shadow"></div>
+	<div class="content-wrapper">
+		<div class="content-header row">
+			<div class="content-header-left col-md-9 col-12 mb-2">
+				<div class="row breadcrumbs-top">
+					<div class="col-12">
+						<h2 class="content-header-title float-left mb-0">Edit Batch</h2>
+						<div class="breadcrumb-wrapper col-12">
+							<ol class="breadcrumb">
+								<li class="breadcrumb-item"><a href="{{ route('studiomanager.dashboard') }}">Home</a>
+								</li>
+								<li class="breadcrumb-item active"><a href="#">Edit Batch</a>
+								</li>
+							</ol>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="content-header-right text-md-right col-md-3 col-12 d-md-block d-none">
+			</div>
+		</div>
+		<div class="content-body">
+			<section id="multiple-column-form">
+				<div class="row match-height">
+					<div class="col-12">
+						<div class="card">
+							<div class="card-content">
+								<div class="card-body">
+									<form class="form" action="{{ route('studiomanager.batch.update', $batch->id) }}" method="post" enctype="multipart/form-data">
+										@method('PATCH')
+										@csrf
+										<div class="form-body">
+											<div class="row">
+												<div class="col-md-6 col-12" id="course_loader">
+													<div class="form-group">
+														<label>Courses</label>
+														@if(count($courses) > 0)
+														<select class="form-control course_id" name="course_id">
+															<option value=""> - Select Course - </option>
+															@foreach($courses as $value)
+															<option value="{{ $value->id }}" @if($value->id == $batch->course_id) selected="selected" @endif>{{ $value->name }}</option>
+															@endforeach
+														</select>
+														<i class="fa fa-spinner fa-spin set-loader" style="display: none;"></i>
+														@endif
+														@if($errors->has('course_id'))
+														<span class="text-danger">{{ $errors->first('course_id') }} </span>
+														@endif
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-12 col-12 mb-2">
+													<div class="input-group after-add-more">
+														<select class="form-control subject_id" name="course[subject_id][]">
+															<option value=""> - Select Subject - </option>
+														</select>
+														<select class="form-control" name="course[faculty_id][]">
+															<option value=""> - Select Faculty - </option>
+															@if(count($faculty) > 0)
+															@foreach($faculty as $f)
+															<option value="{{ $f->id }}">{{ $f->name }}</option>
+															@endforeach
+															@endif
+														</select>
+														<div class="input-group-append" id="button-addon2">
+															<button class="btn btn-primary add-more" type="button">Add More</button>
+														</div>
+													</div>
+													@if(isset($batch->batch_relations) && !empty($batch->batch_relations))
+													<?php foreach($batch->batch_relations as $key => $course) { if(!empty($course)) { ?>
+													<div>
+														<div class="control-group input-group" style="padding-top: 6px;">
+															@if(isset($course->subject_id) && !empty($course->subject_id))
+															<select class="form-control" name="course[subject_id][]">
+																<option value="{{ $course->subject_id }}">{{ $course->subject->name }}</option>
+															</select>
+															@else
+															<select class="form-control subject_id" name="course[subject_id][]">
+																<option value=""> - Select Subject - </option>
+															</select>
+															@endif
+															<select class="form-control" name="course[faculty_id][]">
+																<option value=""> - Select Faculty - </option>
+																@if(count($faculty) > 0)
+																@foreach($faculty as $f)
+																<option value="{{ $f->id }}" @if($f->id == $course->faculty_id) selected="selected" @endif>{{ $f->name }}</option>
+																@endforeach
+																@endif
+															</select>
+															<div class="input-group-append" id="button-addon2">
+																<button class="btn btn-danger remove" type="button">Remove</button>
+															</div>
+														</div>
+													</div>
+													<?php } } ?>
+													@endif
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-6 col-12">
+													<div class="form-group">
+														<label>Batch Name</label>
+														<input type="text" name="name" class="form-control" value="{{ old('name', $batch->name) }}" placeholder="Batch Name">
+														@if($errors->has('name'))
+														<span class="text-danger">{{ $errors->first('name') }} </span>
+														@endif
+													</div>
+												</div>
+												<div class="col-md-6 col-12">
+													<div class="form-group">
+														<label>Start Date</label>
+														@php
+														$startdate = '';
+														if($batch->start_date){
+															$startdate = date('Y-m-d', strtotime($batch->start_date));
+														}
+														@endphp
+														<input type="date" name="start_date" class="form-control" value="{{ old('start_date', $startdate) }}" placeholder="Start Date">
+													</div>
+												</div>										
+												<div class="col-md-6 col-12">
+													<div class="form-group d-flex align-items-center">
+														<label class="mr-2">Status :</label>
+														<label>
+															<input type="radio" name="status" value="1" {{ ($batch->status == 1) ? "checked" : ""}}>
+															Active
+														</label>
+														&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+														<label>
+															<input type="radio" name="status" value="0" {{ ($batch->status == 0) ? "checked" : ""}}>
+															Inactive
+														</label>
+													</div>
+												</div>                                       
+												<div class="col-12">
+													<button type="submit" class="btn btn-primary mr-1 mb-1">Update</button>
+												</div>
+											</div>
+										</div>
+									</form>
+									<div class="copy-fields hide">
+										<div class="control-group input-group" style="padding-top: 6px;">
+											<select class="form-control subject_id" name="course[subject_id][]">
+												<option value=""> - Select Subject - </option>
+											</select>
+											<select class="form-control" name="course[faculty_id][]">
+												<option value=""> - Select Faculty - </option>
+												@if(count($faculty) > 0)
+												@foreach($faculty as $f)
+												<option value="{{ $f->id }}">{{ $f->name }}</option>
+												@endforeach
+												@endif
+											</select>
+											<div class="input-group-append" id="button-addon2">
+												<button class="btn btn-danger remove" type="button">Remove</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+			<!-- // Basic Floating Label Form section end -->
+		</div>
+	</div>
+</div>
+@endsection
+
+@section('scripts')
+<script type="text/javascript">
+	$(document).ready(function() {
+		$(".add-more").click(function(){ 
+			var html = $(".copy-fields").html();
+			$(".after-add-more").after(html);    
+		});
+		$("body").on("click",".remove",function(){
+			$(this).parents(".control-group").remove();
+		});
+	}); 
+</script>
+<script type="text/javascript">
+	$(".course_id").on("change", function () {
+		var course_id = $(".course_id option:selected").attr('value');
+		if (course_id) {
+			$.ajax({
+				beforeSend: function(){
+					$("#course_loader i").show();
+				},
+				type : 'POST',
+				url : '{{ route('studiomanager.get-batch-subject') }}',
+				data : {'_token' : '{{ csrf_token() }}', 'course_id': course_id},
+				dataType : 'html',
+				success : function (data){
+					$("#course_loader i").hide();
+					$('.subject_id').empty();
+					$('.subject_id').append(data);
+				}
+			});
+		}
+	});
+</script>
+@endsection

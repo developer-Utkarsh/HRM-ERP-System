@@ -1,0 +1,1459 @@
+<?php
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Timetable;
+use App\TimeSlot;
+use App\Subject;
+use App\Chapter;
+use App\Topic;
+use DB;
+use App\Studio;
+use Input;
+use App\FacultyRelation;
+use App\Reschedule;
+use App\CancelClass;
+use App\Batchrelation;
+use App\Batch;
+use App\User;
+use App\Swap;
+use App\Userdetails;
+use App\ClassRemark;
+use App\Leave;
+use Excel;
+use App\Exports\TimetableExport;
+
+class TimeTableController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
+    {
+        $branch_id  = Input::get('branch_id');
+        $faculty_id = Input::get('faculty_id');
+        $studio_id  = Input::get('studio_id');
+		$batch_id   = Input::get('batch_id');
+        $fdate      = Input::get('fdate');
+
+        $timeslots = TimeSlot::get();
+
+        $get_studios = array();
+        
+
+        if ($branch_id || $studio_id || $faculty_id || $batch_id || $fdate)
+        {
+
+            $get_studios = Studio::with(['assistant',
+			'timetable' => function ($q) use ($faculty_id, $fdate)
+            {
+				$q->where('is_deleted', '0');
+				
+                if (!empty($faculty_id))
+                {
+                    $q->where('faculty_id', $faculty_id)->where('time_table_parent_id', 0)->orderBy('from_time', 'asc');
+                }
+                if (!empty($fdate))
+                {
+                    $q->Where('cdate', $fdate)->where('time_table_parent_id', 0)->orderBy('from_time', 'asc');
+                }
+				else{
+					$q->Where('cdate',  date('Y-m-d'))->where('time_table_parent_id', 0)->orderBy('from_time', 'asc');
+				}
+            }
+            , 'timetable.topic','timetable.chapter',
+			'timetable.batch' => function ($q) use ($batch_id)
+            {
+                if(!empty($batch_id)){
+					$q->where('id', '=', $batch_id);
+				}
+            }
+            ])->orderBy('id', 'desc');
+
+            if (!empty($branch_id))
+            {
+                $get_studios->where('branch_id', '=', $branch_id);
+            }
+
+            if (!empty($studio_id))
+            {
+                $get_studios->where('id', '=', $studio_id);
+            }
+			if (!empty($faculty_id) || !empty($fdate)){	
+			$get_studios->WhereHas('timetable', function ($q) use ($faculty_id, $fdate) {
+						if (!empty($faculty_id))
+						{
+							$q->where('faculty_id', $faculty_id)->where('time_table_parent_id', 0)->orderBy('from_time', 'asc');
+						}
+						if (!empty($fdate))
+						{
+							$q->Where('cdate', $fdate)->where('time_table_parent_id', 0)->orderBy('from_time', 'asc');
+						}
+						else{
+							$q->Where('cdate',  date('Y-m-d'))->where('time_table_parent_id', 0)->orderBy('from_time', 'asc');
+						}
+					});
+		    }		
+			if (!empty($batch_id)){	
+				$get_studios->WhereHas('timetable.batch', function ($q) use ($batch_id) {
+					if(!empty($batch_id)){
+						$q->where('id', '=', $batch_id);
+					}
+				});
+		    }
+
+            $get_studios = $get_studios->get();
+			 //echo '<pre>'; print_r($get_studios);die;
+        }
+        
+        return view('admin.timetable.index', compact('timeslots', 'get_studios'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function create()
+    {
+        return view('admin.timetable.add');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+        if ($request->ajax())
+        {
+			if(!empty($request->from_time) && !empty($request->to_time)){
+				$from_time = date("H:i", strtotime($request->from_time));
+				$to_time = date("H:i", strtotime($request->to_time));
+				if($request->class_type=='offline'){
+					if(empty($request->chapter_id_offline)){
+						return response(['status' => false, 'message' => 'Chapter and Topic is required'], 200);
+					}
+				}
+				else{
+					if(empty($request->chapter_id)){
+						return response(['status' => false, 'message' => 'Chapter is required'], 200);
+					}
+					elseif(empty($request->topic_id)){
+						return response(['status' => false, 'message' => 'Topic is required'], 200);
+					}
+					elseif(empty($request->online_class_type)){
+						return response(['status' => false, 'message' => 'Class Type is required'], 200);
+					}
+				}
+				
+				
+				$from_time_id = TimeSlot::where('time_slot', $from_time)
+				->first();
+				$get_from_time_id = $from_time_id->id;
+				$to_time_id = TimeSlot::where('time_slot', $to_time)
+				->first();
+				$get_to_time_id = $to_time_id->id;
+
+
+		           
+				$error = false;
+				if(strtotime($from_time) > strtotime($to_time)){
+					$error = true;
+				}  
+
+
+				if($error){ 
+					return response(['status' => false, 'message' => 'End time should not be less than start time.'], 200);
+				}
+
+
+
+				$get_studio_timetable = Timetable::where('studio_id', $request->studio_id)
+				->where('cdate', $request->cdate)
+				->get();
+
+				if (count($get_studio_timetable) > 0)
+				{
+					$from_time2 = [];
+					$to_time2 = [];
+
+					foreach ($get_studio_timetable as $value)
+					{
+						if(!empty($value->from_time) && !empty($value->to_time)){
+							$from_time1 = TimeSlot::select('id')->where('time_slot', $value->from_time)
+							->first();
+							$from_time2[] = $from_time1->id;
+							$to_time1 = TimeSlot::select('id')->where('time_slot', $value->to_time)
+							->first();
+							$to_time2[] = $to_time1->id;
+						}
+					}
+
+					$chk_condition = 'false';
+
+					for ($i = 0;$i < count($from_time2);$i++)
+					{
+						if ($get_from_time_id >= $from_time2[$i] && $get_from_time_id <= $to_time2[$i])
+						{
+							$chk_condition = 'true';
+						}
+						else if ($get_to_time_id >= $from_time2[$i] && $get_to_time_id <= $to_time2[$i])
+						{
+							$chk_condition = 'true';
+						}
+					}
+
+					if ($chk_condition == 'true')
+					{
+						return response(['status' => false, 'message' => 'Slot is not available, please choose another one.'], 200);
+					}
+					else
+					{
+
+						$get_faculty_studio_timetable = Timetable::where('faculty_id', $request->faculty_id)
+						->where('cdate', $request->cdate)
+						->get();
+
+						if (count($get_faculty_studio_timetable) > 0)
+						{
+
+							$from_time2 = [];
+							$to_time2 = [];
+
+							foreach ($get_faculty_studio_timetable as $value)
+							{
+								$from_time1 = TimeSlot::select('id')->where('time_slot', $value->from_time)
+								->first();
+								if(!empty($from_time1)){
+								    $from_time2[] = $from_time1->id;
+								}
+								$to_time1 = TimeSlot::select('id')->where('time_slot', $value->to_time)
+								->first();
+								if(!empty($to_time1)){
+							    	$to_time2[] = $to_time1->id;
+								}
+							}
+
+							$chk_condition = 'false';
+
+							for ($i = 0;$i < count($from_time2);$i++)
+							{
+								if ($get_from_time_id >= $from_time2[$i] && $get_from_time_id <= $to_time2[$i])
+								{
+									$chk_condition = 'true';
+								}
+								else if ($get_to_time_id >= $from_time2[$i] && $get_to_time_id <= $to_time2[$i])
+								{
+									$chk_condition = 'true';
+								}
+							}
+
+							if ($chk_condition == 'true')
+							{
+								return response(['status' => false, 'message' => 'Slot is not available, please choose another one.'], 200);
+							}
+							else
+							{
+								$inputs = $request->only('studio_id', 'assistant_id', 'faculty_id', 'batch_id', 'course_id', 'subject_id', 'chapter_id', 'topic_id', 'from_time', 'to_time', 'cdate','class_type','online_class_type'); 
+								$inputs['from_time'] = $from_time;
+								$inputs['to_time'] = $to_time;
+								if($request->class_type == 'offline'){
+									$chapter_id_offline = $request->chapter_id_offline;
+									if(!empty($chapter_id_offline)){
+										foreach($chapter_id_offline as $key=>$chapterTopic){
+											$chapterTopic = explode('-',$chapterTopic);
+											if(!empty($chapterTopic[0]) && !empty($chapterTopic[1])){
+												$inputs['chapter_id']  = $chapterTopic[0];
+												$inputs['topic_id'] = $chapterTopic[1];
+												if($key > 0){
+													$inputs['from_time'] = null;
+													$inputs['to_time'] = null;
+												}
+												$timetable = Timetable::create($inputs);
+												if(empty($inputs['time_table_parent_id'])){
+													$timetable_id = $timetable->id;
+													$inputs['time_table_parent_id'] = $timetable_id;
+												}
+												
+											}								
+										}
+									}
+									
+								}
+								else{
+									$timetable = Timetable::create($inputs);
+									
+									Self::store_batch_accrd_subject($request->batch_accord_subject, $inputs, $timetable->id, $request->batch_accord_chapter, $request->batch_accord_topic, $request->batch_accord_course, $request->batch_accord_subjects);
+									
+								}
+
+								$remark = ClassRemark::where('subject_id', $request->subject_id)->first();
+
+								if($remark){
+									$remark->remark = $request->remark;
+									$remark->update();
+
+								}else{
+									$input_remark = $request->only('subject_id','remark');
+									$remark = ClassRemark::create($input_remark);
+								}                            
+
+								if ($timetable->save())
+								{
+									return response(['status' => true, 'message' => 'Class Added Successfully.'], 200);
+								}
+								else
+								{
+									return response(['status' => false, 'message' => 'Something Went Wrong'], 200);
+								}
+
+							}
+
+						}
+						else
+						{
+							$inputs = $request->only('studio_id', 'assistant_id', 'faculty_id', 'batch_id', 'course_id', 'subject_id', 'chapter_id', 'topic_id', 'from_time', 'to_time', 'cdate', 'class_type','online_class_type');
+							$inputs['from_time'] = $from_time;
+							$inputs['to_time'] = $to_time;
+							if($request->class_type == 'offline'){
+								$chapter_id_offline = $request->chapter_id_offline;
+								if(!empty($chapter_id_offline)){
+									foreach($chapter_id_offline as $key=>$chapterTopic){
+										$chapterTopic = explode('-',$chapterTopic);
+										if(!empty($chapterTopic[0]) && !empty($chapterTopic[1])){
+											$inputs['chapter_id']  = $chapterTopic[0];
+											$inputs['topic_id'] = $chapterTopic[1];
+											if($key > 0){
+												$inputs['from_time'] = null;
+												$inputs['to_time'] = null;
+											}
+											$timetable = Timetable::create($inputs);
+											if(empty($inputs['time_table_parent_id'])){
+												$timetable_id = $timetable->id;
+												$inputs['time_table_parent_id'] = $timetable_id;
+											}
+											
+										}								
+									}
+								}
+								
+							}
+							else{
+								$timetable = Timetable::create($inputs);
+								
+								Self::store_batch_accrd_subject($request->batch_accord_subject, $inputs, $timetable->id, $request->batch_accord_chapter, $request->batch_accord_topic, $request->batch_accord_course, $request->batch_accord_subjects);
+								
+							}
+							
+								
+
+							$remark = ClassRemark::where('subject_id', $request->subject_id)->first();
+
+							if($remark){
+								$remark->remark = $request->remark;
+								$remark->update();
+
+							}else{
+								$input_remark = $request->only('subject_id','remark');
+								$remark = ClassRemark::create($input_remark);
+							}
+
+							if ($timetable->save())
+							{
+								return response(['status' => true, 'message' => 'Class Added Successfully.'], 200);
+							}
+							else
+							{
+								return response(['status' => false, 'message' => 'Something Went Wrong'], 200);
+							}
+
+						}
+					}
+
+				}
+				else
+				{
+					$get_faculty_studio_timetable = Timetable::where('faculty_id', $request->faculty_id)
+					->where('cdate', $request->cdate)
+					->get();
+
+					if (count($get_faculty_studio_timetable) > 0)
+					{
+
+						$from_time2 = [];
+						$to_time2 = [];
+
+						foreach ($get_faculty_studio_timetable as $value)
+						{
+							$from_time1 = TimeSlot::select('id')->where('time_slot', $value->from_time)
+							->first();
+							$from_time2[] = $from_time1->id;
+							$to_time1 = TimeSlot::select('id')->where('time_slot', $value->to_time)
+							->first();
+							$to_time2[] = $to_time1->id;
+						}
+
+						$chk_condition = 'false';
+
+						for ($i = 0;$i < count($from_time2);$i++)
+						{
+							if ($get_from_time_id >= $from_time2[$i] && $get_from_time_id <= $to_time2[$i])
+							{
+								$chk_condition = 'true';
+							}
+							else if ($get_to_time_id >= $from_time2[$i] && $get_to_time_id <= $to_time2[$i])
+							{
+								$chk_condition = 'true';
+							}
+						}
+
+						if ($chk_condition == 'true')
+						{
+							return response(['status' => false, 'message' => 'Slot is not available, please choose another one.'], 200);
+						}
+						else
+						{
+							$inputs = $request->only('studio_id', 'assistant_id', 'faculty_id', 'batch_id', 'course_id', 'subject_id', 'chapter_id', 'topic_id', 'from_time', 'to_time', 'cdate', 'class_type','online_class_type');
+							$inputs['from_time'] = $from_time;
+							$inputs['to_time'] = $to_time;
+							if($request->class_type == 'offline'){
+								$chapter_id_offline = $request->chapter_id_offline;
+								if(!empty($chapter_id_offline)){
+									foreach($chapter_id_offline as $key=>$chapterTopic){
+										$chapterTopic = explode('-',$chapterTopic);
+										if(!empty($chapterTopic[0]) && !empty($chapterTopic[1])){
+											$inputs['chapter_id']  = $chapterTopic[0];
+											$inputs['topic_id'] = $chapterTopic[1];
+											if($key > 0){
+												$inputs['from_time'] = null;
+												$inputs['to_time'] = null;
+											}
+											$timetable = Timetable::create($inputs);
+											if(empty($inputs['time_table_parent_id'])){
+												$timetable_id = $timetable->id;
+												$inputs['time_table_parent_id'] = $timetable_id;
+											}
+											
+										}								
+									}
+								}
+								
+							}
+							else{
+								$timetable = Timetable::create($inputs);
+								
+								Self::store_batch_accrd_subject($request->batch_accord_subject, $inputs, $timetable->id, $request->batch_accord_chapter, $request->batch_accord_topic, $request->batch_accord_course, $request->batch_accord_subjects);
+								
+							}
+						
+							
+							$remark = ClassRemark::where('subject_id', $request->subject_id)->first();
+
+							if($remark){
+								$remark->remark = $request->remark;
+								$remark->update();
+
+							}else{
+								$input_remark = $request->only('subject_id','remark');
+								$remark = ClassRemark::create($input_remark);
+							}
+
+							if ($timetable->save())
+							{
+								return response(['status' => true, 'message' => 'Class Added Successfully.'], 200);
+							}
+							else
+							{
+								return response(['status' => false, 'message' => 'Something Went Wrong'], 200);
+							}
+						}
+
+					}
+					else
+					{
+						
+						$inputs = $request->only('studio_id', 'assistant_id', 'faculty_id', 'batch_id', 'course_id', 'subject_id', 'chapter_id', 'topic_id', 'from_time', 'to_time', 'cdate','class_type','online_class_type');
+						$inputs['from_time'] = $from_time;
+						$inputs['to_time'] = $to_time;
+						if($request->class_type == 'offline'){
+							$chapter_id_offline = $request->chapter_id_offline;
+							if(!empty($chapter_id_offline)){
+								foreach($chapter_id_offline as $key=>$chapterTopic){
+									$chapterTopic = explode('-',$chapterTopic);
+									if(!empty($chapterTopic[0]) && !empty($chapterTopic[1])){
+										$inputs['chapter_id']  = $chapterTopic[0];
+										$inputs['topic_id'] = $chapterTopic[1];
+										if($key > 0){
+											$inputs['from_time'] = null;
+											$inputs['to_time'] = null;
+										}
+										$timetable = Timetable::create($inputs);
+										if(empty($inputs['time_table_parent_id'])){
+											$timetable_id = $timetable->id;
+											$inputs['time_table_parent_id'] = $timetable_id;
+										}
+										
+									}								
+								}
+							}
+							
+						}
+						else{
+							$timetable = Timetable::create($inputs);
+							
+							Self::store_batch_accrd_subject($request->batch_accord_subject, $inputs, $timetable->id, $request->batch_accord_chapter, $request->batch_accord_topic, $request->batch_accord_course, $request->batch_accord_subjects);
+							
+						}
+						//echo '<pre>'; print_r();die;
+						$remark = ClassRemark::where('subject_id', $request->subject_id)->first();
+
+						if($remark){
+							$remark->remark = $request->remark;
+							$remark->update();
+
+						}else{
+							$input_remark = $request->only('subject_id','remark');
+							$remark = ClassRemark::create($input_remark);
+						}
+
+						if ($timetable->save())
+						{
+							return response(['status' => true, 'message' => 'Class Added Successfully.'], 200);
+						}
+						else
+						{
+							return response(['status' => false, 'message' => 'Something Went Wrong'], 200);
+						}
+
+					}
+				}
+			}
+			else{
+				return response(['status' => false, 'message' => 'From time and To time required.'], 200);
+			}
+
+        }
+        else
+        {
+            return response('Something Went Wrong', 500);
+        }
+    }
+	
+	public function store_batch_accrd_subject($batch_accord_subject, $requests, $timetable_id, $batch_accord_chapter, $batch_accord_topic, $batch_accord_course, $batch_accord_subjects){
+		
+		if(count($batch_accord_subject) > 0){
+			foreach($batch_accord_subject as $accord_batch_key=>$accord_batch_val){
+				
+				if(!empty($accord_batch_val) && !empty($batch_accord_chapter[$accord_batch_key]) && !empty($batch_accord_topic[$accord_batch_key]) && !empty($batch_accord_course[$accord_batch_key]) && !empty($batch_accord_subjects[$accord_batch_key])){					
+					$batch_by_topic_insert = DB::table('timetables')->insertGetId([
+						'studio_id'            => $requests['studio_id'],
+						'assistant_id'         => $requests['assistant_id'],
+						'faculty_id'           => $requests['faculty_id'],
+						'batch_id'             => $accord_batch_val,
+						'course_id'            => $batch_accord_course[$accord_batch_key],
+						'subject_id'           => $batch_accord_subjects[$accord_batch_key],
+						'chapter_id'           => $batch_accord_chapter[$accord_batch_key],
+						'topic_id'             => $batch_accord_topic[$accord_batch_key],
+						'from_time'            => $requests['from_time'],
+						'to_time'              => $requests['to_time'],
+						'time_table_parent_id' => $timetable_id,
+						'cdate'                => $requests['cdate'],
+						'created_at'           => date('Y-m-d H:i:s'),
+						'updated_at'           => date('Y-m-d H:i:s')
+					]);	
+				}
+			}
+		}
+
+	}
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        //
+
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
+    {
+        //
+
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+        //
+
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        //
+
+    }
+
+    public function get_batch(Request $request)
+    {
+
+        $faculty_id = $request->faculty_id;
+
+        $batchs = Batchrelation::with('batch')->select('batch_id')->where('faculty_id', $faculty_id)->groupBy('batch_id')->get();
+
+        if (!empty($batchs))
+        {
+            echo $res = "<option value=''> Select Batch </option>";
+            foreach ($batchs as $key => $value)
+            {
+                if (!empty($value->batch->name) && !empty($value->batch->name))
+                {
+                    echo $res = "<option value='" . $value->batch->id . "'>" . $value->batch->name . "</option>";
+                }
+            }
+            exit();
+        }
+        else
+        {
+            echo $res = "<option value=''> Batch Not Found </option>";
+            die();
+        }
+    }
+
+    public function get_course(Request $request)
+    {
+
+        $batch_id = $request->batch_id;
+
+        $course = Batch::with('course')->select('course_id')->where('id', $batch_id)->get();
+
+        //print_r($course->toArray()); die;
+        echo $res = "<input type='hidden' name='batch_id' value='" . $batch_id . "'>";
+
+        if (!empty($course))
+        {
+            $res = "";
+            foreach ($course as $key => $value)
+            {
+                if (!empty($value->course->name) && !empty($value->course->name))
+                {
+                    $res .= "<option value='" . $value->course->id . "'>" . $value->course->name . "</option>";
+                }
+            }
+			if(empty($res)){
+				$res = "<option value=''> Select Course </option>";
+			}
+			echo $res;
+            exit();
+        }
+        else
+        {
+            echo $res = "<option value='No data'> Course Not Found </option>";
+            die();
+        }
+    }
+	
+	public function get_data_by_topic(Request $request){ 
+		$get_batch = DB::table('batch')->groupBy('batch.id')->get(); 
+							//echo '<pre>'; print_r($batch_by_subject);die;
+		if (count($get_batch) > 0) {
+			
+					
+				echo $res = '<div class="row remove_rows" >';
+				echo $res = "<div class='col-md-3 col-12'>";	
+				echo $res = "<div class='form-label-group'>";	
+				echo $res = "<select class='form-control batch_accord_subject select-multiple-51' name='batch_accord_subject[]'>";
+				echo $res = "<option value=''> Batch </option>";				
+				    foreach ($get_batch as $key => $value) {
+						if(!empty($value->id) && !empty($value->name)){
+							echo $res = "<option value='". $value->id ."' >" . $value->name ."</option>";
+						}
+					}
+				echo $res = "</select>";
+				echo $res = "</div>";
+				echo $res = "</div>";
+				
+				echo $res = "<div class='col-md-3 col-12'  style='display: none;'>";	
+				echo $res = "<div class='form-label-group'>";	
+				echo $res = "<select class='form-control batch_accord_course select-multiple-61' name='batch_accord_course[]'>";
+				echo $res = "<option value=''> Course </option>";
+				echo $res = "</select>";
+				echo $res = "</div>";
+				echo $res = "</div>";
+				
+				echo $res = "<div class='col-md-3 col-12'>";	
+				echo $res = "<div class='form-label-group'>";	
+				echo $res = "<select class='form-control batch_accord_subjects select-multiple-61' name='batch_accord_subjects[]'>";
+				echo $res = "<option value=''> Subject </option>";
+				echo $res = "</select>";
+				echo $res = "</div>";
+				echo $res = "</div>";
+				 
+				echo $res = "<div class='col-md-3 col-12'>";	
+				echo $res = "<div class='form-label-group'>";	
+				echo $res = "<select class='form-control batch_accord_chapter select-multiple-61' name='batch_accord_chapter[]'>";
+				echo $res = "<option value=''> Chapter </option>";
+				echo $res = "</select>";
+				echo $res = "</div>";
+				echo $res = "</div>";
+				
+				echo $res = "<div class='col-md-3 col-12'>";	
+				echo $res = "<div class='form-label-group'>";	
+				echo $res = "<select class='form-control batch_accord_topic select-multiple-71' name='batch_accord_topic[]'>";
+				echo $res = "<option value=''> Topic </option>";
+				echo $res = "</select>";
+				echo $res = "</div>";
+				echo $res = "</div>";
+				echo $res = "</div>";
+			die();
+			
+		}
+		
+		
+	}
+	
+	public function get_batch_by_subject(Request $request){
+		$subject_id = $request->subject_id;
+		$batch_id   = $request->batch_id;
+		$i = 1;
+		$j = 1;
+		$batch_by_subject = DB::table('batch')
+		                    ->join('batchrelations', 'batch.id', '=', 'batchrelations.batch_id')
+							->select('batch.id', 'batch.name')
+							->where([['batchrelations.subject_id', '=', $subject_id],['batch.id', '!=', $batch_id]])
+							->groupBy('batch.id')
+		                    ->get(); 
+							//echo '<pre>'; print_r($batch_by_subject);die;
+		if (!empty($batch_by_subject)) {
+			
+			foreach ($batch_by_subject as $key => $value) {		
+				echo $res = '<div class="row subject_batches" >';
+				echo $res = "<div class='col-md-4 col-12'>";	
+				echo $res = "<div class='form-label-group'>";	
+				echo $res = "<select class='form-control batch_accord_subject select-multiple-51' name='batch_accord_subject[]'>";	
+				
+					if(!empty($value->id) && !empty($value->name)){
+						echo $res = "<option value='". $value->id ."' >" . $value->name ."</option>";
+					}
+				echo $res = "</select>";
+				echo $res = "</div>";
+				echo $res = "</div>";
+				
+				echo $res = "<div class='col-md-4 col-12'>";	
+				echo $res = "<div class='form-label-group'>";	
+				echo $res = "<select class='form-control batch_accord_chapter select-multiple-61' name='batch_accord_chapter[]'>";
+				
+				$chapters = Chapter::where('subject_id', $subject_id)->get();
+				echo $res = "<option value=''> Select Chapter </option>";
+				if (!empty($chapters)) {
+					foreach ($chapters as $chapterskey => $chaptersvalue) {
+						if(!empty($chaptersvalue->id) && !empty($chaptersvalue->name)){
+							echo $res = "<option value='". $chaptersvalue->id ."' >" . $chaptersvalue->name ."</option>";
+						}
+						
+					}
+				}
+				
+				echo $res = "</select>";
+				echo $res = "</div>";
+				echo $res = "</div>";
+				echo $res = "<div class='col-md-4 col-12'>";	
+				echo $res = "<div class='form-label-group'>";	
+				echo $res = "<select class='form-control batch_accord_topic select-multiple-71' name='batch_accord_topic[]'>";
+				echo $res = "<option value=''> Select Topic </option>";
+				echo $res = "</select>";
+				echo $res = "</div>";
+				echo $res = "</div>";
+				echo $res = "</div>";
+				$j++;
+				$i++;
+			}
+			
+		}
+		
+		die();		
+		//echo '<pre>'; print_r($batch_by_topic);die;
+	}
+
+    public function get_batch_subject(Request $request){
+
+        $batch_id = $request->batch_id;
+
+        $subjects = Batchrelation::with('subject')->where('batch_id', $batch_id)->get();
+
+        if (!empty($subjects)) {                         
+            echo $res = "<option value=''> Select Subject </option>";
+            foreach ($subjects as $key => $value) {
+                if(!empty($value->subject->name) && !empty($value->subject->name)){
+                    echo $res = "<option value='". $value->subject->id ."'>" . $value->subject->name ."</option>";
+                }
+            }
+            exit();
+        } else {
+            echo $res = "<option value='No data'> Subject Not Found </option>";
+            die();
+        }
+    }
+	
+	public function get_topic_by_chapter(Request $request){
+		$chapter_id = $request->chapter_id;
+		
+		$topics = Topic::where('chapter_id', $chapter_id)->get();
+        
+        if (!empty($topics)) {                         
+            echo $res = "<option value=''> Select Topic </option>";
+            foreach ($topics as $topicskey => $topicsvalue) {
+                if(!empty($topicsvalue->id) && !empty($topicsvalue->name)){
+                    echo $res = "<option value='". $topicsvalue->id ."'>" . $topicsvalue->name ."</option>";
+                }
+            }
+            exit();
+        } else {
+            echo $res = "<option value=''> Topic Not Found </option>";
+            die();
+        }
+	}
+
+    public function get_remark(Request $request)
+    {
+        $subject_id = $request->subject_id;
+
+        $classremark = ClassRemark::where('subject_id', $subject_id)->first();
+
+        if(!empty($classremark)){
+            echo json_encode(['status' => true, 'data' => $classremark->remark]);
+        }else{
+            echo json_encode(['status' => false, 'data' => '']);
+        }
+    }
+
+    public function get_chapter(Request $request)
+    {
+        $subject_id = $request->subject_id;
+        $course_id = $request->course_id;
+
+        $chapters = Chapter::where('subject_id', $subject_id)->where('course_id', $course_id)->get();
+
+        if (!empty($chapters))
+        {
+            echo $res = "<option value=''> Select Chapter </option>";
+            foreach ($chapters as $key => $value)
+            {
+                if (!empty($value->name) && !empty($value->name))
+                {
+                    echo $res = "<option value='" . $value->id . "'>" . $value->name . "</option>";
+                }
+            }
+            exit();
+        }
+        else
+        {
+            echo $res = "<option value=''> Chapter Not Found </option>";
+            die();
+        }
+    }
+
+    public function get_topic(Request $request)
+    {
+
+        $batch_id   = $request->batch_id;
+		$course_id  = $request->course_id;
+		$subject_id = $request->subject_id;
+		$chapter_id = $request->chapter_id;
+        $topics = [];
+        //$topics = Topic::where('chapter_id', $chapter_id)->get();
+		
+		$chk_topics = DB::table('timetables')
+					->join('start_classes', 'timetables.id', '=', 'start_classes.timetable_id')
+					->select('timetables.topic_id')
+					->where([['timetables.batch_id', '=', $batch_id],['timetables.course_id', '=', $course_id],['timetables.subject_id', '=', $subject_id],['timetables.chapter_id', '=', $chapter_id],['start_classes.status', '=', 'End Class']])->get();
+		
+$expected_ids = [];		
+		if(count($chk_topics) > 0){
+			foreach($chk_topics as $chk_topics_value){
+				$expected_ids[] = $chk_topics_value->topic_id;
+				//echo '<pre>'; print_r($topics);die;
+			}
+		}
+		
+		$get_topics = Topic::where('chapter_id', '=', $chapter_id)->whereNotIn('id', $expected_ids)->get();
+		if(count($get_topics) > 0){
+			foreach($get_topics as $topics_value){
+				$temp['id']   = $topics_value->id;
+				$temp['name'] = $topics_value->name . " (".$topics_value->duration.")";
+				$topics[] = $temp;
+			}
+		}
+         
+        if (count($topics) > 0)
+        {
+            echo $res = "<option value=''> Select Topic </option>";
+            foreach ($topics as $key => $value)
+            {   
+                if (!empty($value['id']) && !empty($value['name']))
+                {
+                    echo $res = "<option value='" . $value['id'] . "'>" . $value['name'] . "</option>";
+                }
+            }
+            exit();
+        }
+        else
+        {
+            echo $res = "<option value=''> Topic Not Found </option>";
+            die();
+        }
+    }
+
+    public function reschedule_store(Request $request)
+    {
+        $inputs = $request->only('timetable_id','from_time','to_time','faculty_reason');            
+
+        $reschedule = Reschedule::create($inputs);           
+
+        if($reschedule->save()){
+            return response(['status' => true, 'message' => 'Reschedule Request Sent Successfully.'], 200);
+        }else{          
+            return response(['status' => false, 'message' => 'Something Went Wrong'], 200);
+        }
+    }
+
+    public function swap_store(Request $request)
+    {
+        $inputs = $request->only('timetable_id', 'swap_with_faculty_id','swap_timetable_id');
+
+        $inputs['swap_with_faculty_id'] = $request->swap_faculty_id;
+
+        $swap = Swap::create($inputs);           
+
+        if($swap->save()){
+            return response(['status' => true, 'message' => 'Swap Request Sent Successfully.'], 200);
+        }else{          
+            return response(['status' => false, 'message' => 'Something Went Wrong'], 200);
+        }
+    }
+
+    public function cancelclass_store(Request $request)
+    {
+        $inputs = $request->only('timetable_id','days','faculty_reason');
+
+        if(!empty($request->other_reason)){
+            $inputs['faculty_reason'] = $request->other_reason;
+        }           
+
+        $cancelclass = CancelClass::create($inputs);           
+
+        if($cancelclass->save()){
+            return response(['status' => true, 'message' => 'Cancel Class Request Sent Successfully.'], 200);
+        }else{          
+            return response(['status' => false, 'message' => 'Something Went Wrong'], 200);
+        }
+    }
+
+    public function get_swap_faculty(Request $request)
+    {
+
+        $faculty_id = $request->faculty_id;
+        $get_faculty_branch = Timetable::with('studio')->where('faculty_id', $faculty_id)->first();
+        //print_r($get_faculty_branch->studio->branch_id);
+
+        $userdeatils = Userdetails::with([
+            'user' => function($q){
+                $q->select('id','name')->where('role_id','2')->where('status', '1');
+            },
+        ])->where('user_id','!=',$faculty_id)->where('branch_id',$get_faculty_branch->studio->branch_id)->get();
+
+        //print_r($userdeatils->toArray()); die;
+
+        //$get_faculty = User::select('id','name')->where('role_id','2')->where('id','!=',$faculty_id)->get();
+
+        //print_r($get_faculty->toArray()); die;       
+
+        if (!empty($userdeatils))
+        {
+            echo $res = "<option value=''> Select Faculty </option>";
+            foreach ($userdeatils as $key => $value)
+            {
+                if (!empty($value->user->name) && !empty($value->user->name))
+                {
+                    echo $res = "<option value='" . $value->user->id . "'>" . $value->user->name . "</option>";
+                }
+            }
+            exit();
+        }
+        else
+        {
+            echo $res = "<option value='No data'> Faculty Not Found </option>";
+            die();
+        }
+    }
+
+    public function get_swap_faculty_timetable(Request $request)
+    {
+
+        $swap_faculty_id = $request->swap_faculty_id;
+
+        $get_faculty_timetable = Timetable::select('id','from_time')->where('faculty_id',$swap_faculty_id)->get();
+
+        //print_r($get_faculty_timetable->toArray()); die;       
+
+        if (!empty($get_faculty_timetable))
+        {
+            echo $res = "<option value=''> Select From Time </option>";
+            foreach ($get_faculty_timetable as $key => $value)
+            {
+                if (!empty($value->from_time) && !empty($value->from_time))
+                {
+                    echo $res = "<option value='" . $value->id . "'>" . $value->from_time . "</option>";
+                }
+            }
+            exit();
+        }
+        else
+        {
+            echo $res = "<option value='No data'> From Time Not Found </option>";
+            die();
+        }
+    }
+
+    public function timetable_export(Request $request)
+    {
+        return view('admin.timetable.exportdata');
+    }
+
+    public function export_data(Request $request)
+    {
+        if(is_array($request->id) && !empty($request->id)){
+
+            $id = [];
+
+            if ($request->has('id') && !empty($request->id)) {
+
+                $id =  $request->id;
+                return Excel::download(new TimetableExport($id), 'TimetableData.xlsx');
+            }
+
+        } else{
+            return redirect()->route('admin.timetables.export')->with('error', 'Please Select Checkbox');
+        }
+    }
+	
+	public function get_faculty(Request $request)
+    {
+
+        $subject_id = $request->subject_id;
+        $batch_id = $request->batch_id;
+
+        $faculty = Batchrelation::with('user')->where('batch_id', $batch_id)->where('subject_id', $subject_id)->get();
+        $faculty_array    = array();
+        $faculty_id       = 0;
+        $res              = '';
+        $today_on_leave   = false;
+        if (!empty($faculty))
+        {
+            
+            foreach ($faculty as $key => $value)
+            {   
+
+            	$today_date = date('Y-m-d'); 
+            	$check_today_leave_faculty = Leave::with('leave_details');
+
+            	$check_today_leave_faculty->WhereHas('leave_details', function ($q) {
+					$q->where('date', date('Y-m-d'));
+					$q->where('status', 'Approved');
+				});
+				$check_today_leave_faculty = $check_today_leave_faculty->where('emp_id', $value->user->id)->first();
+
+                //echo '<pre>'; print_r($check_today_leave_faculty);die;
+            	if(!empty($check_today_leave_faculty->leave_details[0]->leave_id)){
+                	$today_on_leave = true;
+                }
+                if (!empty($value->user->name) && !empty($value->user->name))
+	                {
+	                    $res .= "<option value='" . $value->user->id . "'>" . $value->user->name ." (". $value->user->register_id .")". "</option>";
+						
+						$faculty_id = $value->user->id;
+	                    
+	                }
+            }
+			
+        }
+        else
+        {
+            $res = "<option value='No data'> Faculty Not Found </option>";
+          
+            
+        }
+		
+		$batches_html = "";
+		/* if($faculty_id > 0){
+			$batches_html = view('admin.timetable.faculty_batches', compact('faculty_id'))->render();
+		} */
+        return json_encode(array('response' => $res, 'today_leave' => $today_on_leave, 'batches_html'=>$batches_html));
+
+        exit();
+    }
+	
+	public function get_chapter_and_topic(Request $request)
+    {
+        $batch_id = $request->batch_id;
+        $course_id = $request->course_id;
+        $subject_id = $request->subject_id;
+
+        $chapters = Chapter::where('subject_id', $subject_id)->where('course_id', $course_id)->get();
+		$res = "";
+        if (!empty($chapters))
+        {
+            $res .= "<option value=''> Select Chapter && Topic </option>";
+            foreach ($chapters as $key => $value)
+            {
+                if (!empty($value->name) && !empty($value->name))
+                {
+					$getTopic = $this->get_topic_chapter($batch_id,$course_id, $subject_id, $value->id);
+					if(!empty($getTopic)){
+						$chapter_id = $value->id;
+						// $res .= "<option value='" . $value->id . "'>" . $value->name . "</option>";
+						foreach ($getTopic as $tvalue)
+						{   
+							if (!empty($tvalue['id']) && !empty($tvalue['name']))
+							{
+								$topic_id = $tvalue['id'];
+								$res .= "<option value='".$chapter_id.'-'.$topic_id."'>" . $value->name .' - '. $tvalue['name'] . "</option>";
+							}
+						}
+					}
+                }
+            }
+        }
+        else
+        {
+            $res .= "<option value=''> Chapter Not Found </option>";
+        }
+		echo $res;
+		die;
+    }
+	
+	public function get_topic_chapter($batch_id, $course_id, $subject_id, $chapter_id){
+		$topics = [];
+		$chk_topics = DB::table('timetables')
+					->join('start_classes', 'timetables.id', '=', 'start_classes.timetable_id')
+					->select('timetables.topic_id')
+					->where([['timetables.batch_id', '=', $batch_id],['timetables.course_id', '=', $course_id],['timetables.subject_id', '=', $subject_id],['timetables.chapter_id', '=', $chapter_id],['start_classes.status', '=', 'End Class']])->get();
+		
+		$expected_ids = [];		
+		if(count($chk_topics) > 0){
+			foreach($chk_topics as $chk_topics_value){
+				$expected_ids[] = $chk_topics_value->topic_id;
+				//echo '<pre>'; print_r($topics);die;
+			}
+		}
+		
+		$get_topics = Topic::where('chapter_id', '=', $chapter_id)->whereNotIn('id', $expected_ids)->get();
+		if(count($get_topics) > 0){
+			foreach($get_topics as $topics_value){
+				$temp['id']   = $topics_value->id;
+				$temp['name'] = $topics_value->name;
+				$topics[] = $temp;
+			}
+		}
+         
+        return $topics;
+	}
+	
+	public function delete_class(Request $request){
+
+        $timetable_id = $request->timetable_id;
+
+        if($request->ajax()){ 
+
+            $inputs = $request->only('timetable_id');
+
+            $inputs['timetable_id'] = $timetable_id;
+            
+			$get_parent_timetable = DB::table('timetables')->where('id', $timetable_id)->orWhere('time_table_parent_id', $timetable_id)->get();
+			if(count($get_parent_timetable) > 0){
+				foreach($get_parent_timetable as $parent_value){
+					DB::table('timetables')->where('id', $parent_value->id)->update([
+								'is_deleted' => '1'
+							]);			
+				}
+			}	
+            return response(['status' => true, 'message' => 'Delete Successfully'], 200);
+        }                
+    }
+	
+	public function get_studio_edit(Request $request){//echo '<pre>'; print_r($request->post());die;
+		$timetable_id = $request->timetable_id;
+		$typ          = $request->typ;
+		$get_edit_data = Timetable::where('id', $timetable_id)->first();
+		$res = '';
+		if (!empty($timetable_id) && !empty($typ))
+        {
+			$batch = Batch::where('status', '1')->orderBy('id', 'asc')->get(); 
+			return $html = view('admin.timetable.online_edit_class', compact('batch','get_edit_data'))->render();		
+		}
+	}
+	
+	public function edit_online_store(Request $request){
+		if(!empty($request['online_timetable_id'])){
+			if(!empty($request['from_time']) && !empty($request['to_time'])){
+				
+				$from_time = date("H:i", strtotime($request['from_time']));
+				$to_time = date("H:i", strtotime($request['to_time']));
+				
+				$from_time_id = TimeSlot::where('time_slot', $from_time)
+				->first();
+				$get_from_time_id = $from_time_id->id;
+				$to_time_id = TimeSlot::where('time_slot', $to_time)
+				->first();
+				$get_to_time_id = $to_time_id->id;
+
+
+		           
+				$error = false;
+				if(strtotime($from_time) > strtotime($to_time)){
+					$error = true;
+				}  
+
+
+				if($error){ 
+					return response(['status' => false, 'message' => 'End time should not be less than start time.'], 200);
+				}
+				
+				$get_studio_timetable = Timetable::where('studio_id', $request['online_studio_id'])
+				->where('cdate', $request['online_cdate'])->where('id', '!=', $request['online_timetable_id'] )
+				->get();
+				
+				if (count($get_studio_timetable) > 0)
+				{
+					$from_time2 = [];
+					$to_time2 = [];
+
+					foreach ($get_studio_timetable as $value)
+					{
+						if(!empty($value->from_time) && !empty($value->to_time)){
+							$from_time1 = TimeSlot::select('id')->where('time_slot', $value->from_time)
+							->first();
+							$from_time2[] = $from_time1->id;
+							$to_time1 = TimeSlot::select('id')->where('time_slot', $value->to_time)
+							->first();
+							$to_time2[] = $to_time1->id;
+						}
+					}
+
+					$chk_condition = 'false';
+
+					for ($i = 0;$i < count($from_time2);$i++)
+					{
+						if ($get_from_time_id >= $from_time2[$i] && $get_from_time_id <= $to_time2[$i])
+						{
+							$chk_condition = 'true';
+						}
+						else if ($get_to_time_id >= $from_time2[$i] && $get_to_time_id <= $to_time2[$i])
+						{
+							$chk_condition = 'true';
+						}
+					}
+
+					if ($chk_condition == 'true')
+					{
+						return response(['status' => false, 'message' => 'Slot is not available, please choose another one.'], 200);
+					}
+					else
+					{
+
+						$get_faculty_studio_timetable = Timetable::where('faculty_id', $request['online_faculty_id'])
+						->where('cdate', $request['online_cdate'])
+						->where('id', '!=', $request['online_timetable_id'])
+						->get();
+
+						if (count($get_faculty_studio_timetable) > 0)
+						{
+
+							$from_time2 = [];
+							$to_time2 = [];
+
+							foreach ($get_faculty_studio_timetable as $value)
+							{
+								$from_time1 = TimeSlot::select('id')->where('time_slot', $value->from_time)
+								->first();
+								$from_time2[] = $from_time1->id;
+								$to_time1 = TimeSlot::select('id')->where('time_slot', $value->to_time)
+								->first();
+								$to_time2[] = $to_time1->id;
+							}
+
+							$chk_condition = 'false';
+
+							for ($i = 0;$i < count($from_time2);$i++)
+							{
+								if ($get_from_time_id >= $from_time2[$i] && $get_from_time_id <= $to_time2[$i])
+								{
+									$chk_condition = 'true';
+								}
+								else if ($get_to_time_id >= $from_time2[$i] && $get_to_time_id <= $to_time2[$i])
+								{
+									$chk_condition = 'true';
+								}
+							}
+
+							if ($chk_condition == 'true')
+							{
+								return response(['status' => false, 'message' => 'Slot is not available, please choose another one.'], 200);
+							}
+							else
+							{ 
+								$store_online_data = DB::table('timetables')->where('id', $request['online_timetable_id'])->update([
+										'faculty_id'   => $request['online_faculty_id'],
+										'batch_id'     => $request['online_batch_id'],
+										'course_id'    => $request['online_course_id'],
+										'subject_id'   => $request['online_subject_id'],
+										'chapter_id'   => $request['online_chapter_id'],
+										'topic_id'     => $request['online_topic_id'],
+										'from_time'    => $from_time,
+										'to_time'      => $to_time,
+										'cdate'        => $request['online_cdate'],
+										'updated_at'   => date('Y-m-d H:i:s'),
+								]);
+
+								$remark = ClassRemark::where('subject_id', $request['online_subject_id'])->first();
+
+								if($remark){
+									$remark->remark = $request['online_remark'];
+									$remark->update();
+
+								}else{
+									$input_remark = $request->only('online_subject_id','online_remark');
+									$remark = ClassRemark::create($input_remark);
+								}                           
+
+								if ($store_online_data)
+								{
+									return response(['status' => true, 'message' => 'Class Added Successfully.'], 200);
+								}
+								else
+								{
+									return response(['status' => false, 'message' => 'Something Went Wrong'], 200);
+								}
+
+							}
+
+						}
+						else
+						{
+							$store_online_data = DB::table('timetables')->where('id', $request['online_timetable_id'])->update([
+										'faculty_id'   => $request['online_faculty_id'],
+										'batch_id'     => $request['online_batch_id'],
+										'course_id'    => $request['online_course_id'],
+										'subject_id'   => $request['online_subject_id'],
+										'chapter_id'   => $request['online_chapter_id'],
+										'topic_id'     => $request['online_topic_id'],
+										'from_time'    => $from_time,
+										'to_time'      => $to_time,
+										'cdate'        => $request['online_cdate'],
+										'updated_at'   => date('Y-m-d H:i:s'),
+				            ]);
+
+							$remark = ClassRemark::where('subject_id', $request['online_subject_id'])->first();
+
+							if($remark){
+								$remark->remark = $request['online_remark'];
+								$remark->update();
+
+							}else{
+								$input_remark = $request->only('online_subject_id','online_remark');
+								$remark = ClassRemark::create($input_remark);
+							}
+
+							if ($store_online_data)
+							{
+								return response(['status' => true, 'message' => 'Class Added Successfully.'], 200);
+							}
+							else
+							{
+								return response(['status' => false, 'message' => 'Something Went Wrong'], 200);
+							}
+
+						}
+					}
+
+				}
+				else
+				{
+					$store_online_data = DB::table('timetables')->where('id', $request['online_timetable_id'])->update([
+										'faculty_id'   => $request['online_faculty_id'],
+										'batch_id'     => $request['online_batch_id'],
+										'course_id'    => $request['online_course_id'],
+										'subject_id'   => $request['online_subject_id'],
+										'chapter_id'   => $request['online_chapter_id'],
+										'topic_id'     => $request['online_topic_id'],
+										'from_time'    => $from_time,
+										'to_time'      => $to_time,
+										'cdate'        => $request['online_cdate'],
+										'updated_at'   => date('Y-m-d H:i:s'),
+				            ]);
+
+							$remark = ClassRemark::where('subject_id', $request['online_subject_id'])->first();
+
+							if($remark){
+								$remark->remark = $request['online_remark'];
+								$remark->update();
+
+							}else{
+								$input_remark = $request->only('online_subject_id','online_remark');
+								$remark = ClassRemark::create($input_remark);
+							}
+
+							if ($store_online_data)
+							{
+								return response(['status' => true, 'message' => 'Class Added Successfully.'], 200);
+							}
+							else
+							{
+								return response(['status' => false, 'message' => 'Something Went Wrong'], 200);
+							}
+				}
+				
+				
+					
+				return response(['status' => true, 'message' => 'Successfully Add.'], 200);
+			}	
+			else{
+				return response(['status' => false, 'message' => 'From time and To time required.'], 200);
+			}
+		}
+		else
+		{
+			return response('Something Went Wrong', 500);
+		}
+	}
+	
+}
+

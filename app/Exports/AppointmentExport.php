@@ -1,0 +1,142 @@
+<?php
+
+namespace App\Exports;
+
+use App\StartClass;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
+
+class AppointmentExport implements FromCollection,WithHeadings,ShouldAutoSize,WithEvents
+{
+
+	public function registerEvents(): array
+	{
+		return [
+			AfterSheet::class    => function(AfterSheet $event) {
+				$cellRange = 'A1:W1';
+				$event->sheet->getDelegate()->getStyle($cellRange)->getFont()->setSize(14);
+			},
+		];
+	}
+
+	public function __construct( $get_data){
+		$this->get_data = $get_data;
+	}
+
+	public function headings(): array
+	{
+		return [
+			"SR. NO.",
+			"User Name",
+			"Title",
+			"Description",
+			"Meeting Place",
+			"Date",
+			"Start Time",
+			"End Time",
+			"Meeting URL",
+		];
+	}
+
+    /**
+    * @return \Illuminate\Support\Collection
+    */
+    public function collection()
+    {
+    	$get_data = $this->get_data;
+			$export_data_all = [];
+			
+			$dataFound = 1;
+			
+			
+				
+			foreach ($get_data as $key => $value)
+			{  
+				$export_data = [];
+							
+				$export_data[$key][] = $dataFound;
+				
+				if (isset($value->user_name) && !empty($value->user_name))
+				{
+					$export_data[$key][] = $value->user_name;
+				}
+				else
+				{
+					$export_data[$key][] = '';
+				}
+
+				if (isset($value->title) && !empty($value->title))
+				{
+					$export_data[$key][] = $value->title;
+				}
+				else
+				{
+					$export_data[$key][] = '';
+				}
+
+				if (isset($value->description) && !empty($value->description))
+				{
+					$export_data[$key][] = $value->description;
+				}
+				else
+				{
+					$export_data[$key][] = '';
+				}
+
+				if (isset($value->meeting_place_name) && !empty($value->meeting_place_name))
+				{
+					$export_data[$key][] = $value->meeting_place_name;
+				}
+				else
+				{
+					$export_data[$key][] = '';
+				}
+
+				if (isset($value->appointment_date) && !empty($value->appointment_date))
+				{
+					$export_data[$key][] = date('d-m-Y',strtotime($value->appointment_date));
+				}
+				else
+				{
+					$export_data[$key][] = '';
+				}
+
+				if (isset($value->start_time) && !empty($value->start_time))
+				{
+					$export_data[$key][] = $value->start_time;
+				}
+				else
+				{
+					$export_data[$key][] = '';
+				}
+				
+				
+				if (isset($value->end_time) && !empty($value->end_time))
+				{
+					$export_data[$key][] = $value->end_time;
+				}
+				else
+				{
+					$export_data[$key][] = '';
+				}
+				
+				if (isset($value->url) && !empty($value->url))
+				{
+					$export_data[$key][] = $value->url;
+				}
+				else
+				{
+					$export_data[$key][] = '';
+				}
+				
+				$export_data_all[$key] = $export_data;
+					
+				$dataFound++;
+			}
+			
+			return collect($export_data_all);
+    }
+}

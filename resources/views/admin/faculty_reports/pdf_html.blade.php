@@ -1,0 +1,379 @@
+<button type="button" onClick="dataPrint()" class="noprint">Excel Export</button>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+    <head>
+
+        <title><?php //echo $title; ?></title>
+
+        <meta charset="utf-8">
+
+            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+    </head>
+	<div style="text-align:center;">
+		<h3>Faculty Report</h3>
+	</div>
+
+    <body id="printData">
+
+        <?php if (!empty($get_faculty)) {
+
+			foreach ($get_faculty as $get_faculty_value) {
+
+			?>
+
+			<table class="table2" style="border:1px solid;width:100%;" >
+
+				
+
+				<tbody>
+
+
+				<tr style="">
+
+				<td >
+
+			<!-- <table>
+
+			<tbody>
+
+			<tr style="" >
+
+			 <th colspan="9"></th>
+
+			</tr>
+
+			</tbody>
+
+			</table> -->
+
+		
+
+            <table class="table1" cellpadding="1" style='width:100%;' border="1">
+
+			 
+
+                <tbody>
+
+					<tr style="" >
+
+                        <th colspan="10" style="font-size:14px;color:red;"><b><?php echo $get_faculty_value->faculty_name; ?></b></th>
+						<!--th colspan="5"><b>Assistant Name : <?php //echo $get_faculty_value->assistant_name; ?></b></th-->
+
+                    </tr>
+
+					<tr style="font-size:12px;background-color: #ff9f43;" class="tHead">
+					<th style='text-align:center;font-size:12px'>Branch Name</th>
+					<th style='text-align:center;font-size:12px'>Batch Name</th>
+					<th style='text-align:center;font-size:12px'>Classroom Name No.</th>
+					<th style='text-align:center;font-size:12px'>Subject Name</th>
+					<th style='text-align:center;font-size:12px'>Assistant Name</th>
+					<th style='text-align:center; font-size:12px'>From Time</th>
+                    <th style='text-align:center;font-size:12px;'>To Time</th>
+					<th style='text-align:center;font-size:12px'>Schedule Time</th>
+					<th style='text-align:center;'>Spent Time</th>
+					<th style='text-align:center;font-size:12px'>Date</th>
+					<th style='text-align:center;font-size:12px'>Topic</th>
+					<th style='text-align:center;font-size:12px'>Remark</th>
+						
+						
+
+                        
+
+                        <!--th style='text-align:center;'>Course Name</th-->
+
+                       
+
+                        <!--th style='text-align:center;'>Chapter Name</th-->
+						
+						
+
+                        <!--th style='text-align:center;'>Topic Name</th-->
+
+						<!--th style='text-align:center;'>Status</th-->
+						
+						
+
+                    </tr>
+
+					<?php
+
+					$whereCond = '1=1';;
+					$whereCondLeave = '1=1';;
+					if(!empty($selectFromDate)){
+							$whereCond .= ' AND timetables.cdate >= "'.$selectFromDate.'" AND timetables.cdate <= "'.$selectToDate.'"';
+							 $whereCondLeave .= ' AND date >= "'.$selectFromDate.'" AND date <= "'.$selectToDate.'"';
+					}
+					else{
+						$whereCond .= ' AND timetables.cdate = "'.date('Y-m-d').'"';
+						$whereCondLeave .= ' AND date = "'.date('Y-m-d').'"';
+					}	
+					
+					$faculty_leave = DB::table('faculty_leave')
+											  ->select('date as cdate','reason')
+											  ->whereRaw($whereCondLeave)
+											  ->where("faculty_id",$get_faculty_value->faculty_id)
+											  ->where("is_deleted",'0')
+											  ->get();
+											  
+					if(!empty($get_faculty_value->faculty_name)){
+					$get_faculty_timetable = DB::table('timetables')
+											  ->select('timetables.*','studios.name as studios_name','branches.name as branches_name','branches.id as branches_id','batch.name as batch_name','course.name as course_name','subject.name as subject_name','chapter.name as chapter_name','start_classes.status as start_classes_status','start_classes.start_time as start_classes_start_time','start_classes.end_time as start_classes_end_time','users_assistant.name as assistant_name','users_assistant.mobile as assistant_mobile','start_classes.remark','start_classes.topic_name')
+											  ->leftJoin('studios', 'studios.id', '=', 'timetables.studio_id')
+											  ->leftJoin('branches', 'branches.id', '=', 'studios.branch_id')
+											  ->leftJoin('batch', 'batch.id', '=', 'timetables.batch_id')
+											  ->leftJoin('course', 'course.id', '=', 'timetables.course_id')
+											  ->leftJoin('subject', 'subject.id', '=', 'timetables.subject_id')
+											  ->leftJoin('chapter', 'chapter.id', '=', 'timetables.chapter_id')
+											  ->leftJoin('start_classes', 'start_classes.timetable_id', '=', 'timetables.id')
+											  ->leftJoin('users as users_assistant', 'users_assistant.id', '=', 'timetables.assistant_id')
+											  ->where('timetables.faculty_id', $get_faculty_value->faculty_id)
+											  ->where('timetables.time_table_parent_id', '0')
+											  ->whereRaw("(timetables.is_deleted='0' OR timetables.is_deleted='2')");
+											  
+												if(!empty($status) && $status == 'cancel'){
+													$get_faculty_timetable->where('timetables.is_cancel', '1');
+												}					  
+												if(!empty(Auth::user()->id) &&  Auth::user()->user_details->degination == "CENTER HEAD"){
+													$user_branch_id = Auth::user()->user_branches[0]->branch_id;
+													$get_faculty_timetable->whereIn('timetables.studio_id',$studio_arr);
+												}
+												else if(!empty(Auth::user()->id) &&  Auth::user()->user_details->degination == "STUDIO INCHARGE"){
+												  $user_branch_id = Auth::user()->user_branches[0]->branch_id; 
+												  $studio_arr = Studio::where('branch_id', $user_branch_id)->get()->pluck('id'); 
+												  
+												  $get_faculty->whereIn('timetables.studio_id',$studio_arr);
+												}
+												else if(Auth::user()->role_id == 3){
+													$get_faculty_timetable->where('timetables.assistant_id', Auth::user()->id);
+												}
+												
+												if(!empty(app('request')->input('batch_id'))){
+													$get_faculty_timetable->where('batch.id', app('request')->input('batch_id'));
+												}
+												
+												if(!empty(app('request')->input('branch_id'))){
+													$get_faculty_timetable->where('studios.branch_id', app('request')->input('branch_id'));
+												}
+												
+												if(!empty(app('request')->input('assistant_id'))){
+													$get_faculty_timetable->where('timetables.assistant_id', app('request')->input('assistant_id'));
+												}
+												
+												$get_faculty_timetable = $get_faculty_timetable->whereRaw($whereCond)
+													  ->orderBy('timetables.cdate')
+													  ->orderBy('timetables.from_time', 'ASC')
+													  ->get();
+
+											 			  
+					$duration  = "00 : 00 Hours"; 
+					$schedule_duration  = "00 : 00 Hours"; 
+					$base_time = new DateTime('00:00');
+					$total     = new DateTime('00:00');
+					
+					$total_schedule = new DateTime('00:00');
+					$total_base_schedule = new DateTime('00:00');
+					
+					if(count($faculty_leave) > 0){
+						$faculty_leave = json_decode($faculty_leave,true);
+						$get_faculty_timetable = json_decode($get_faculty_timetable,true);
+						$get_faculty_timetable = array_merge($faculty_leave,$get_faculty_timetable);
+						$key_values = array_column($get_faculty_timetable, 'cdate'); 
+						array_multisort($key_values, SORT_ASC, $get_faculty_timetable);
+						
+						$get_faculty_timetable = json_decode(json_encode($get_faculty_timetable), FALSE);
+					}
+							
+					if(count($get_faculty_timetable) > 0){ 
+					foreach($get_faculty_timetable as $key => $get_faculty_timetable_value){
+						if(!empty($get_faculty_timetable_value->id)){
+						if($get_faculty_timetable_value->is_cancel != '1'){
+							$first_date = new DateTime($get_faculty_timetable_value->start_classes_start_time);
+							$second_date = new DateTime($get_faculty_timetable_value->start_classes_end_time);
+							$interval = $first_date->diff($second_date);
+							$duration = $interval->format('%H : %I Hours');
+							$base_time->add($interval);
+						}
+						else{
+							$duration = 'Cancelled Classes';
+						}
+						
+						
+						$from_time         = new DateTime($get_faculty_timetable_value->from_time);
+						$to_time           = new DateTime($get_faculty_timetable_value->to_time);
+						$schedule_interval = $from_time->diff($to_time);
+						$schedule_duration = $schedule_interval->format('%H : %I Hours');
+						$total_base_schedule->add($schedule_interval); 
+
+					?>
+
+                        <tr style="font-size:12px">
+						<td style="font-size:12px"><?php echo isset($get_faculty_timetable_value->branches_name) ?  $get_faculty_timetable_value->branches_name : '' ?>
+							<?php
+								if(!empty($get_faculty_timetable_value->branches_id)){
+									$get_data = DB::table('users')
+									->leftJoin('userbranches','users.id','=','userbranches.user_id')
+									->leftJoin('userdetails','users.id','=','userdetails.user_id')
+									->select('users.name as user_name','users.mobile as mobile')
+									->where('userbranches.branch_id',$get_faculty_timetable_value->branches_id)
+									->where('userdetails.degination','CENTER HEAD')
+									->where('users.status',1)
+									->get();
+									$center_heads = "";
+									if(count($get_data) > 0){
+										foreach($get_data as $center_data){
+											$center_heads .= $center_data->user_name."( ".$center_data->mobile." ) ,";
+										}
+										echo "<b>CH.-</b> ".rtrim($center_heads,',');
+									}
+								}
+								
+								?>
+						</td>
+						<td style="font-size:12px">
+							<?php
+							$get_batches_name = "";
+							$get_batches = DB::table('timetables')->select("batch.name as b_name")->leftJoin('batch','batch.id','=','timetables.batch_id')->where('timetables.is_deleted', '0')->where('timetables.time_table_parent_id', $get_faculty_timetable_value->id)->get();
+							if(count($get_batches) > 0){
+								foreach($get_batches as $vallll){
+									$get_batches_name .= ', '.$vallll->b_name;
+								}
+							}
+							echo isset($get_faculty_timetable_value->batch_name) ?  $get_faculty_timetable_value->batch_name : '';
+							echo $get_batches_name;
+							?>
+						</td>
+						<td style="font-size:12px"><?php echo isset($get_faculty_timetable_value->studios_name) ?  $get_faculty_timetable_value->studios_name : '' ?></td>
+						<td style="font-size:12px"><?php echo isset($get_faculty_timetable_value->subject_name) ?  $get_faculty_timetable_value->subject_name : '' ?></td>
+						<td style="font-size:12px"><?php echo isset($get_faculty_timetable_value->assistant_name) ?  $get_faculty_timetable_value->assistant_name : '' ?>
+							( <?php echo isset($get_faculty_timetable_value->assistant_mobile) ?  $get_faculty_timetable_value->assistant_mobile : '' ?> )
+							</td>							
+						<td style="font-size:12px"><?php echo isset($get_faculty_timetable_value->from_time) ?  date("h:i A", strtotime($get_faculty_timetable_value->from_time)) : '' ?></td>
+						<td style="font-size:12px"><?php echo isset($get_faculty_timetable_value->to_time) ?  date("h:i A", strtotime($get_faculty_timetable_value->to_time)) : '' ?></td>
+						<td style="font-size:12px"><?php echo $schedule_duration ?></td>
+						<td><?php echo $duration ?></td>
+							
+						<td style="font-size:12px"><?php echo isset($get_faculty_timetable_value->cdate) ?  date('d-m-Y',strtotime($get_faculty_timetable_value->cdate)) : '' ?></td>
+						<td style="font-size:12px">
+						<?php echo isset($get_faculty_timetable_value->topic_name) ?  $get_faculty_timetable_value->topic_name : '' ?>
+						</td>
+						<td style="font-size:12px"><?php echo isset($get_faculty_timetable_value->remark) ?  $get_faculty_timetable_value->remark : '' ?></td>
+							
+
+                        </tr> 
+					<?php
+					}
+					else{
+						?>
+						<tr style="font-size:12px">
+							<td style="font-size:12px" colspan="9">On Leave </td>
+							<td style="font-size:12px"> <?=date('d-m-Y',strtotime($get_faculty_timetable_value->cdate))?> </td>
+							<td style="font-size:12px" colspan="2"> <?=$get_faculty_timetable_value->reason?> </td>
+						</tr>
+						<?php
+					}
+
+					}
+					}
+					}
+
+					?>
+					<tr style="" >
+
+						<th colspan="5"><b>Total Schedule Time : 
+						<?php
+						$totalDays = $total_schedule->diff($total_base_schedule)->format("%a");
+						$totalHours = $total_schedule->diff($total_base_schedule)->format("%H");
+						$totalMinute = $total_schedule->diff($total_base_schedule)->format("%I");
+						echo ($totalDays*24)+$totalHours. ":" . $totalMinute;
+						?>
+						<?php //echo $total_schedule->diff($total_base_schedule)->format("%H:%I") ?>
+						Hours
+						</b></th>
+						<th colspan="5"><b>Total Spent Time : 
+						<?php
+						$baseDays = $total->diff($base_time)->format("%a");
+						$baseHours = $total->diff($base_time)->format("%H");
+						$baseMinute = $total->diff($base_time)->format("%I");
+						echo ($baseDays*24)+$baseHours. ":" . $baseMinute;
+						?>
+						<?php //echo $total->diff($base_time)->format("%H:%I") ?>
+						Hours
+						</b></th>
+
+					</tr>
+                </tbody>
+
+			
+
+            </table>
+
+			<!-- <p>&nbsp;</p> -->
+
+			</td>
+
+			</tr>
+
+			</tbody>
+
+			</table>
+			<table class="" ><tr style="" ><td>&nbsp;</td></tr></table>
+
+        <?php 
+
+			}	
+
+		}
+
+		?>
+
+    </body>
+
+	<style>
+	body {
+		font-family : 'Arial';
+	}
+	
+	.table1 {
+	  border-collapse: collapse;
+	}
+
+	.table1 td, .table1 th, .table2 th {
+	  border: thin solid #ff9f43;
+	}
+	
+	.table1 .tHead th{
+		border: thin solid #000;
+	}
+
+	
+	@media print {
+		
+	  @page {size: auto; margin: 0; }
+	  body { margin: 1.6cm; }
+	  .noprint {	display: none;	}
+	  
+	}
+    </style>
+
+</html>
+
+<script src="{{ asset('laravel/public/admin/js/vendors.min.js') }}"></script>
+<script>
+
+$(document).ready(function () { 
+	window.print(); 
+	// window.close();
+});
+
+function dataPrint(){
+	//document.getElementById('noprint').style.display = 'none';
+	
+	var htmltable= document.getElementById('printData');
+	var html = htmltable.innerHTML;
+	window.open('data:application/vnd.ms-excel,' + encodeURIComponent(html));
+}
+</script>
+

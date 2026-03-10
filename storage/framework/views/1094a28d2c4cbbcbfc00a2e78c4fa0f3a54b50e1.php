@@ -1,0 +1,1193 @@
+
+<?php $__env->startSection('content'); ?>
+<div class="app-content content">
+	<div class="content-overlay"></div>
+	<div class="header-navbar-shadow"></div>
+	<div class="content-wrapper">
+		<div class="content-header row">
+			<div class="content-header-left col-md-9 col-12 mb-2">
+				<div class="row breadcrumbs-top">
+					<div class="col-12">
+						<h2 class="content-header-title float-left mb-0">Faculty Report</h2>
+						<div class="breadcrumb-wrapper col-12">
+							<ol class="breadcrumb">
+								<li class="breadcrumb-item"><a href="<?php echo e(route('studiomanager.dashboard')); ?>">Home</a>
+								</li>
+								<li class="breadcrumb-item active">List View</li>
+							</ol>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="content-body">
+			<!-- Data list view starts -->
+			<section id="data-list-view" class="data-list-view-header">
+				<div class="card">
+					<div class="card-content collapse show">
+						<div class="card-body">
+							<div class="users-list-filter">
+								<form action="<?php echo e(route('studiomanager.faculty-reports')); ?>" method="get" name="filtersubmit">
+									<div class="row">
+										
+										<div class="col-12 col-sm-6 col-lg-2 branch_loader">
+											<label for="users-list-status">Location</label>
+											<fieldset class="form-group">												
+												<select class="form-control branch_location" name="branch_location" id="">
+													<option value="">Select Any</option>
+													<option value="jaipur" <?php if('jaipur' == app('request')->input('branch_location')): ?> selected="selected" <?php endif; ?>>jaipur</option>
+													<option value="jodhpur" <?php if('jodhpur' == app('request')->input('branch_location')): ?> selected="selected" <?php endif; ?>>jodhpur</option>
+													<option value="prayagraj" <?php if('prayagraj' == app('request')->input('branch_location')): ?> selected="selected" <?php endif; ?>>prayagraj</option>
+													<option value="indore" <?php if('indore' == app('request')->input('branch_location')): ?> selected="selected" <?php endif; ?>>indore</option>
+													<option value="delhi" <?php if('delhi' == app('request')->input('branch_location')): ?> selected="selected" <?php endif; ?>>delhi</option>
+												</select>
+											</fieldset>
+										</div>
+										
+										<div class="col-12 col-sm-6 col-lg-3 branch_loader">
+											<label for="users-list-status">Branch</label>
+											<?php $branches = \App\Branch::where('status', '1')->orderBy('id','desc')->get(); ?>
+											<fieldset class="form-group">												
+												<select class="form-control select-multiple1 branch_id" name="branch_id" id="">
+													<option value="">Select Any</option>
+													<?php if(count($branches) > 0): ?>
+													<?php $__currentLoopData = $branches; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+													<option value="<?php echo e($value->id); ?>" <?php if($value->id == app('request')->input('branch_id')): ?> selected="selected" <?php endif; ?>><?php echo e($value->name); ?></option>
+													<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+													<?php endif; ?>
+												</select>
+												<i class="fa fa-spinner fa-spin set-loader" style="display: none;"></i>
+											</fieldset>
+										</div>
+										<div class="col-12 col-sm-6 col-lg-3 branch_loader">
+											<label for="users-list-status">Subject</label>
+											<?php $subject = \App\Subject::where('status', '1')->orderBy('id','desc')->get(); ?>
+											<fieldset class="form-group">												
+												<select class="form-control select-multiple1 subject_id" name="subject_id" id="">
+													<option value="">Select Any</option>
+													<?php if(count($subject) > 0): ?>
+													<?php $__currentLoopData = $subject; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+													<option value="<?php echo e($value->id); ?>" <?php if($value->id == app('request')->input('subject_id')): ?> selected="selected" <?php endif; ?>><?php echo e($value->name); ?></option>
+													<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+													<?php endif; ?>
+												</select>
+												<i class="fa fa-spinner fa-spin set-loader" style="display: none;"></i>
+											</fieldset>
+										</div>
+										
+										<input type="hidden" class="faculty_id_get" value="<?php echo e(json_encode(app('request')->input('faculty_id'))); ?>">
+										
+										<div class="col-12 col-sm-6 col-lg-3">
+											<label for="users-list-status">Faculty</label>
+											<?php $faculty = \App\User::where('role_id', '2')->orderBy('id','desc')->get(); ?>
+											<fieldset class="form-group">												
+												<select class="form-control select-multiple2 faculty_id" name="faculty_id[]" multiple>
+													<option value="">Select Any</option>
+													<?php if(count($faculty) > 0): ?>
+													<?php $__currentLoopData = $faculty; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+													<option value="<?php echo e($value->id); ?>" <?php if(!empty(app('request')->input('faculty_id')) && in_array($value->id, app('request')->input('faculty_id'))): ?> selected="selected" <?php endif; ?>><?php echo e($value->name); ?></option>
+													<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+													<?php endif; ?>
+												</select>												
+											</fieldset>
+										</div>
+										
+										<div class="col-12 col-md-3">
+											<label for="users-list-status">Batch</label>
+											<?php $batchs = \App\Batch::where('status', '1')->where('is_deleted', '0')->get(); ?>
+											<fieldset class="form-group">												
+												<select class="form-control select-multiple2 batch_id" name="batch_id">
+													<option value="">Select Any</option>
+													<?php if(count($batchs) > 0): ?>
+													<?php $__currentLoopData = $batchs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+													<option value="<?php echo e($value->id); ?>" <?php if($value->id == app('request')->input('batch_id')): ?> selected="selected" <?php endif; ?>><?php echo e($value->name); ?></option>
+													<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+													<?php endif; ?>
+												</select>												
+											</fieldset>
+										</div>
+										<div class="col-12 col-md-2">
+											<label for="users-list-status">Status</label>
+											<fieldset class="form-group">												
+												<select class="form-control select-multiple2 status" name="status">
+													<option value="">Select Status</option>
+													<option value="all" <?php if('all' == app('request')->input('status')): ?> selected="selected" <?php endif; ?>>All</option>
+													<option value="cancel" <?php if('cancel' == app('request')->input('status')): ?> selected="selected" <?php endif; ?>>Cancelled Classes</option>
+													<option value="not_fill_spent_time" <?php if('not_fill_spent_time' == app('request')->input('status')): ?> selected="selected" <?php endif; ?>>Not Fill Spent Time</option>
+												</select>												
+											</fieldset>
+										</div>
+										
+										<div class="col-12 col-sm-6 col-lg-2">											
+											<label for="users-list-status">From Date</label>								
+											<fieldset class="form-group">																					
+												<input type="date" name="fdate" value="<?php echo e(app('request')->input('fdate')); ?>" class="form-control StartDateClass fdate dateddmmyyy">	
+											</fieldset>	
+										</div>	
+										
+										<div class="col-12 col-sm-6 col-lg-2">										
+											<label for="users-list-status">To Date</label>						
+											<fieldset class="form-group">										
+												<input type="date" name="tdate" value="<?php echo e(app('request')->input('tdate')); ?>" class="form-control EndDateClass tdate dateddmmyyy">	
+											</fieldset>									
+										</div>										
+										<div class="col-12 col-sm-6 col-lg-2">
+											<label for="users-list-status">Type</label>
+											<fieldset class="form-group">												
+												<select class="form-control type" name="type">
+													<option value="">Select Type</option>
+													<option value="Online" <?php if('Online' == app('request')->input('type')): ?> selected="selected" <?php endif; ?>>Online</option>
+													<option value="Live From Classroom" <?php if('Live From Classroom' == app('request')->input('type')): ?> selected="selected" <?php endif; ?>>Live From Classroom</option>
+													<option value="Offline" <?php if('Offline' == app('request')->input('type')): ?> selected="selected" <?php endif; ?>>Offline</option>
+												</select>												
+											</fieldset>
+										</div>
+										<div class="col-12 col-md-3">
+											<label for="users-list-status">Category</label>
+											<fieldset class="form-group">												
+												<select class="form-control select-multiple3 category_id" name="category_id">
+													<option value="">Select Any</option>
+													<?php if(!empty($get_category) && count($get_category) > 0): ?>
+													<?php $__currentLoopData = $get_category; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+													<option value="<?php echo e($value->category); ?>" <?php if($value->category == app('request')->input('category_id')): ?> selected="selected" <?php endif; ?>><?php echo e($value->category); ?></option>
+													<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+													<?php endif; ?>
+												</select>												
+											</fieldset>
+										</div>
+									</div>
+									
+									<fieldset class="form-group" style="float:right;">		
+										<button type="submit" class="btn btn-primary"name="search" value="search">Search</button>
+										<a href="<?php echo e(route('studiomanager.faculty-reports')); ?>" class="btn btn-warning">Reset</a>
+										<a href="javascript:void(0)" id="download_pdf" class="btn btn-primary">Export in PDF</a>
+									</fieldset>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="table-responsive">
+				
+				<?php 
+				/*
+				if (count($get_faculty) > 0) {
+					
+					foreach ($get_faculty as $key2=>$get_faculty_value) {
+						$total_cancel_class = 0;
+				?>
+					<table class="table data-list-view" style=''>
+					 
+						<head class="Tt_not_found">
+							<tr style="">
+								<th colspan="11"><b>Faculty Name : <?php echo isset($get_faculty_value->faculty_name)?$get_faculty_value->faculty_name:''; ?></b></th>
+								<!--th colspan="3"><b>Assistant Name : <?php //echo isset($get_faculty_value->assistant_name) ?  $get_faculty_value->assistant_name : ''; ?></b></th-->
+							</tr>
+						</head>
+						<head>
+							<tr style="">
+								<th scope="col">From Time</th>
+								<th scope="col">To Time</th>
+								<th scope="col">Date</th>
+								<th scope="col">Branch Name</th>
+								<th scope="col">Studio</th>
+								
+								<th scope="col">Batch Name</th>
+								<!--th scope="col">Course Name</th-->
+								<th scope="col">Subject Name</th>
+								<!--th scope="col">Chapter Name</th-->
+								<th scope="col">Assistant Name</th>
+								<!--th scope="col">Topic Name</th-->
+								<!--th scope="col">Status</th-->
+								<th scope="col">Schedule Time</th>
+								<th scope="col">Spent Time</th>
+								<th scope="col">Topic</th>
+								<th scope="col">Action</th>
+							</tr>
+						</head>
+						<body>
+							<?php
+							$whereCond = '1=1';;
+							if(!empty($selectFromDate) && !empty($selectToDate)){
+									$whereCond .= ' AND timetables.cdate >= "'.$selectFromDate.'" AND timetables.cdate <= "'.$selectToDate.'"';
+							}
+							else{
+								$whereCond .= ' AND timetables.cdate = "'.date('Y-m-d').'"';
+							}
+							
+							$base_time = new DateTime('00:00');
+							$total     = new DateTime('00:00');
+							
+							$total_schedule = new DateTime('00:00');
+							$total_base_schedule = new DateTime('00:00');
+							$total_base_cancel = new DateTime('00:00');
+							
+							// $whereCond .= ' AND timetables.assistant_id = "'.$get_faculty_value->assistant_id.'"';
+							if(!empty($get_faculty_value->faculty_name)){
+							$get_faculty_timetable = DB::table('timetables')
+							  ->select('timetables.*','studios.name as studios_name','branches.name as branches_name','branches.id as branches_id','batch.name as batch_name','course.name as course_name','subject.name as subject_name','chapter.name as chapter_name','start_classes.status as start_classes_status','start_classes.start_time as start_classes_start_time','start_classes.end_time as start_classes_end_time','start_classes.topic_name','users_assistant.name as assistant_name','users_assistant.mobile as assistant_mobile')
+							  ->leftJoin('studios', 'studios.id', '=', 'timetables.studio_id')
+							  ->leftJoin('branches', 'branches.id', '=', 'studios.branch_id')
+							  ->leftJoin('batch', 'batch.id', '=', 'timetables.batch_id')
+							  ->leftJoin('course', 'course.id', '=', 'timetables.course_id')
+							  ->leftJoin('subject', 'subject.id', '=', 'timetables.subject_id')
+							  ->leftJoin('chapter', 'chapter.id', '=', 'timetables.chapter_id')
+							  ->leftJoin('start_classes', 'start_classes.timetable_id', '=', 'timetables.id')
+							  ->leftJoin('users as users_assistant', 'users_assistant.id', '=', 'timetables.assistant_id')
+							  ->where('timetables.faculty_id', $get_faculty_value->faculty_id);
+							  if(empty($batch_id)){
+								$get_faculty_timetable->where('timetables.time_table_parent_id', '0');
+							  }
+							 
+							$get_faculty_timetable->whereRaw("(timetables.is_deleted='0' OR timetables.is_deleted='2')");
+							
+							if(!empty($type)){
+								 $get_faculty->where('studios.type', $type);
+							}
+							
+							if(!empty(app('request')->input('category_id'))){
+								 $get_faculty->where('batch.category', app('request')->input('category_id'));
+							}
+							
+							if(!empty($status) && $status == 'cancel'){
+							  $get_faculty_timetable->where('timetables.is_cancel',1);
+							}else if(!empty($status) && $status == 'not_fill_spent_time'){
+								$get_faculty_timetable->whereRaw('start_classes.id is null');
+							}else if(!empty($status) && $status == 'all'){
+								$get_faculty_timetable->whereRaw("timetables.is_publish='0'");
+							}else{
+								$get_faculty_timetable->where('timetables.is_publish', '1');
+							}
+
+							if(!empty(app('request')->input('batch_id'))){
+								$get_faculty_timetable->where('batch.id', app('request')->input('batch_id'));
+							}
+
+							if(!empty(app('request')->input('branch_id'))){
+								$get_faculty_timetable->where('studios.branch_id', app('request')->input('branch_id'));
+							}
+							
+							if(!empty(app('request')->input('subject_id'))){
+								$get_faculty_timetable->where('timetables.subject_id', app('request')->input('subject_id'));
+							}
+
+							$get_faculty_timetable = $get_faculty_timetable->whereRaw($whereCond)
+													  ->orderBy('timetables.cdate')
+													  ->orderBy('timetables.from_time', 'ASC')
+													  ->get();
+													  
+							$duration  = "00 : 00 Hours"; 
+							$schedule_duration  = "00 : 00 Hours";
+							
+							if(count($get_faculty_timetable) > 0){ 
+							foreach($get_faculty_timetable as $key => $get_faculty_timetable_value){ 
+								
+								$from_time         = new DateTime($get_faculty_timetable_value->from_time);
+								$to_time           = new DateTime($get_faculty_timetable_value->to_time);
+								$schedule_interval = $from_time->diff($to_time);
+								$schedule_duration = $schedule_interval->format('%H : %I Hours');
+								$total_base_schedule->add($schedule_interval); 
+								
+								if($get_faculty_timetable_value->is_cancel!= 1){
+									$first_date = new DateTime($get_faculty_timetable_value->start_classes_start_time);
+									$second_date = new DateTime($get_faculty_timetable_value->start_classes_end_time);
+									$interval = $first_date->diff($second_date);
+									$duration = $interval->format('%H : %I Hours');
+									$base_time->add($interval); 
+								}else{
+									$total_cancel_class++;
+									$duration = 'Cancelled Classes'.$get_faculty_timetable_value->id;
+									
+									$total_base_cancel->add($schedule_interval); 
+								}
+								
+							?>
+								<tr>
+									<td timetable-id="<?=$get_faculty_timetable_value->id?>"><?php echo isset($get_faculty_timetable_value->from_time) ?  date("h:i A", strtotime($get_faculty_timetable_value->from_time)) : '' ?></td>
+									<td><?php echo isset($get_faculty_timetable_value->to_time) ?  date("h:i A", strtotime($get_faculty_timetable_value->to_time)) : '' ?></td>
+									<td><?php echo isset($get_faculty_timetable_value->cdate) ?  $get_faculty_timetable_value->cdate : '' ?></td>
+									<td><?php echo isset($get_faculty_timetable_value->branches_name) ?  $get_faculty_timetable_value->branches_name : '' ?>
+									<?php
+									if(!empty($get_faculty_timetable_value->branches_id)){
+										$get_data = DB::table('users')
+										->leftJoin('userbranches','users.id','=','userbranches.user_id')
+										->leftJoin('userdetails','users.id','=','userdetails.user_id')
+										->select('users.name as user_name','users.mobile as mobile')
+										->where('userbranches.branch_id',$get_faculty_timetable_value->branches_id)
+										->where('userdetails.degination','CENTER HEAD')->get();
+										$center_heads = "";
+										if(count($get_data) > 0){
+											foreach($get_data as $center_data){
+												$center_heads .= $center_data->user_name."( ".$center_data->mobile." ) ,";
+											}
+											echo "<b>CH.-</b> ".rtrim($center_heads,',');
+										}
+									}
+									
+									?>
+									</td>
+									<td><?php echo isset($get_faculty_timetable_value->studios_name) ?  $get_faculty_timetable_value->studios_name : '' ?></td>
+									</td>
+									<td>
+									<?php 
+									$get_batches_name = "";
+									$get_batches = DB::table('timetables')->select("batch.name as b_name","batch.erp_course_id")->leftJoin('batch','batch.id','=','timetables.batch_id')->where('timetables.is_deleted', '0');
+									// $get_batches->where('timetables.time_table_parent_id', $get_faculty_timetable_value->id);
+									if($get_faculty_timetable_value->time_table_parent_id == 0){
+										$get_batches->where('timetables.time_table_parent_id', $get_faculty_timetable_value->id);
+										$get_batches_name .= isset($get_faculty_timetable_value->batch_name) ?  $get_faculty_timetable_value->batch_name : '';
+									}else{
+										$get_batches->whereRaw("(timetables.id = $get_faculty_timetable_value->time_table_parent_id or timetables.time_table_parent_id = $get_faculty_timetable_value->time_table_parent_id)");
+									}
+									$get_batches = $get_batches->get();
+									
+									if(count($get_batches) > 0){
+										foreach($get_batches as $vallll){
+											$get_batches_name .= ', '.$vallll->b_name.'-'.$vallll->erp_course_id;;
+										}
+									}
+									
+									// echo isset($get_faculty_timetable_value->batch_name) ?  $get_faculty_timetable_value->batch_name : '';
+									echo $get_batches_name;
+									?>
+									</td>
+									<!--td>
+									<?php //echo isset($get_faculty_timetable_value->course_name) ?  $get_faculty_timetable_value->course_name : '' ?>
+									</td-->
+									<td><?php echo isset($get_faculty_timetable_value->subject_name) ?  $get_faculty_timetable_value->subject_name : '' ?></td>
+									<td><?php echo isset($get_faculty_timetable_value->assistant_name) ?  $get_faculty_timetable_value->assistant_name : '' ?>
+									( <?php echo isset($get_faculty_timetable_value->assistant_mobile) ?  $get_faculty_timetable_value->assistant_mobile : '' ?> )
+									</td>
+									<!--td><?php //echo isset($get_faculty_timetable_value->chapter_name) ?  $get_faculty_timetable_value->chapter_name : '' ?></td-->
+									
+									<!--td><?php //echo isset($get_faculty_timetable_value->topic_name) ?  $get_faculty_timetable_value->topic_name : '' ?></td-->
+									<!--td><?php //echo !empty($get_faculty_timetable_value->start_classes_status) ?  $get_faculty_timetable_value->start_classes_status : 'Not Started' ?></td-->
+									<td><?=$schedule_duration?></td>
+									<td class="spd_time{{$key2}}{{$key}}"><?=$duration?></td>
+									<td class=""><?=$get_faculty_timetable_value->topic_name?></td>
+									<td>
+										<a href="javascript:void(0);" data-toggle="modal" data-id="{{ $get_faculty_timetable_value->id }}" data-spent-id="{{$key2}}{{$key}}" class="btn btn-sm btn-outline-primary get_start_class_data"><span class="action-edit"><i class="feather icon-edit"></i></span></a>
+									</td>
+								</tr>
+							<?php
+							}
+							}
+							}
+							?>
+							
+							<tr>
+								<td colspan="3"><b>Total Schedule Time:</b> 
+								<?php
+								$totalDays = $total_schedule->diff($total_base_schedule)->format("%a");
+								$totalHours = $total_schedule->diff($total_base_schedule)->format("%H");
+								$totalMinute = $total_schedule->diff($total_base_schedule)->format("%I");
+								echo ($totalDays*24)+$totalHours. ":" . $totalMinute;
+								?>
+								Hours</td> 
+								<td colspan="3"><b>Total Spent Time:</b> 
+								<?php
+								$baseDays = $total->diff($base_time)->format("%a");
+								$baseHours = $total->diff($base_time)->format("%H");
+								$baseMinute = $total->diff($base_time)->format("%I");
+								echo ($baseDays*24)+$baseHours. ":" . $baseMinute;
+								?> 
+								Hours</td>
+								<td colspan="5"><b>Total Cancel Class:</b> 
+								<strong style="background: red;border-radius: 50%;padding: 6px;color: #fff;"><?=$total_cancel_class?></strong>
+								<br/>
+								<b>Total Cancel Time:</b>
+								<?php
+								$totalDays = $total_schedule->diff($total_base_cancel)->format("%a");
+								$totalHours = $total_schedule->diff($total_base_cancel)->format("%H");
+								$totalMinute = $total_schedule->diff($total_base_cancel)->format("%I");
+								echo ($totalDays*24)+$totalHours. ":" . $totalMinute;
+								?>Hours
+								</td> 								
+							</tr>
+								
+						</body>
+					
+					</table>
+					<p><hr/></p>
+				<?php 
+					}
+				}
+				*/
+				?>
+				
+				<?php 
+					if (!empty($get_faculty)) {
+						foreach ($get_faculty as $key2 => $get_faculty_value) {
+							$total_cancel_class = 0;
+							$whereCond = '1=1';
+
+							if (!empty($selectFromDate) && !empty($selectToDate)) {
+								$whereCond .= ' AND timetables.cdate >= "' . $selectFromDate . '" AND timetables.cdate <= "' . $selectToDate . '"';
+							} else {
+								$whereCond .= ' AND timetables.cdate = "' . date('Y-m-d') . '"';
+							}
+
+							$base_time = new DateTime('00:00');
+							$total     = new DateTime('00:00');
+							$total_base_schedule = new DateTime('00:00');
+							$total_base_cancel = new DateTime('00:00');
+
+							if (!empty($get_faculty_value->faculty_name)) {
+								$get_faculty_timetable = DB::table('timetables')
+									->select(
+										'timetables.*', 'studios.name as studios_name', 'branches.name as branches_name',
+										'branches.id as branches_id', 'batch.name as batch_name', 'course.name as course_name',
+										'subject.name as subject_name', 'chapter.name as chapter_name',
+										'start_classes.status as start_classes_status', 'start_classes.start_time as start_classes_start_time',
+										'start_classes.end_time as start_classes_end_time', 'start_classes.topic_name',
+										'users_assistant.name as assistant_name', 'users_assistant.mobile as assistant_mobile'
+									)
+									->leftJoin('studios', 'studios.id', '=', 'timetables.studio_id')
+									->leftJoin('branches', 'branches.id', '=', 'studios.branch_id')
+									->leftJoin('batch', 'batch.id', '=', 'timetables.batch_id')
+									->leftJoin('course', 'course.id', '=', 'timetables.course_id')
+									->leftJoin('subject', 'subject.id', '=', 'timetables.subject_id')
+									->leftJoin('chapter', 'chapter.id', '=', 'timetables.chapter_id')
+									->leftJoin('start_classes', 'start_classes.timetable_id', '=', 'timetables.id')
+									->leftJoin('users as users_assistant', 'users_assistant.id', '=', 'timetables.assistant_id')
+									->where('timetables.faculty_id', $get_faculty_value->faculty_id);
+
+								if (empty($batch_id)) {
+									$get_faculty_timetable->where('timetables.time_table_parent_id', '0');
+								}
+
+								$get_faculty_timetable->whereRaw("(timetables.is_deleted='0' OR timetables.is_deleted='2')");
+
+								if (!empty($type)) {
+									$get_faculty_timetable->where('studios.type', $type);
+								}
+
+								if (!empty(request()->input('category_id'))) {
+									$get_faculty_timetable->where('batch.category', request()->input('category_id'));
+								}
+
+								if (!empty($status)) {
+									if ($status == 'cancel') {
+										$get_faculty_timetable->where('timetables.is_cancel', 1);
+									} elseif ($status == 'not_fill_spent_time') {
+										$get_faculty_timetable->whereRaw('start_classes.id is null');
+									} elseif ($status == 'all') {
+										$get_faculty_timetable->where('timetables.is_publish', '0');
+									} else {
+										$get_faculty_timetable->where('timetables.is_publish', '1');
+									}
+								} else {
+									$get_faculty_timetable->where('timetables.is_publish', '1');
+								}
+
+								if (!empty(request()->input('batch_id'))) {
+									$get_faculty_timetable->where('batch.id', request()->input('batch_id'));
+								}
+
+								if (!empty(request()->input('branch_id'))) {
+									$get_faculty_timetable->where('studios.branch_id', request()->input('branch_id'));
+								}
+
+								if (!empty(request()->input('subject_id'))) {
+									$get_faculty_timetable->where('timetables.subject_id', request()->input('subject_id'));
+								}
+
+								$get_faculty_timetable = $get_faculty_timetable->whereRaw($whereCond)
+									->orderBy('timetables.cdate')
+									->orderBy('timetables.from_time', 'ASC')
+									->get();
+
+								
+								if (count($get_faculty_timetable) > 0) {
+									include resource_path('views/studiomanager/faculty_reports/tt_table.blade.php');
+								}
+							}
+						}
+					}
+					?>
+
+		<style>
+		hr{background:#000;}
+		</style>
+					 
+				</div>       
+				
+			</section>
+		</div>
+	</div>
+</div>
+
+<div id="s_class" class="modal fade">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<form method="post" id="submit_start_class_form">
+				<div class="modal-header">
+					<h5 class="modal-title">Timetable - <span class="subject_name_set"></span></h5>
+                    <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+				</div>
+				<div class="modal-body">
+					<div class="form-body">
+						<div class="row pt-2 htmlset">
+						</div>
+						<div class="row pt-2">
+						
+							<?php if(Auth::user()->user_details->degination == "CENTER HEAD"): ?>
+								<?php
+								$user_branch_id = Auth::user()->user_branches[0]->branch_id;
+								
+								$userdeatils = \App\Userbranches::with([
+									'user' => function($q){
+										$q->where('role_id', '3')->where('status', '1')->where('is_deleted', '0');
+									}
+								]);
+
+								$userdeatils->WhereHas('user', function ($q) {
+												 $q->where('role_id', '3')->where('status', '1')->where('is_deleted', '0');
+											});
+					
+								$userdeatils = $userdeatils->where('branch_id', $user_branch_id)->get();					
+								?>
+								
+								<div class="col-md-12 col-12">
+									<div class="form-label-group">												
+										<select class="form-control select-multiple4 assistant_id" name="assistant_id" required>
+											<option value="">Select Assistant</option>
+											<?php if(count($userdeatils) > 0): ?>
+												<?php $__currentLoopData = $userdeatils; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+												<option value="<?php echo e($value->user->id); ?>"><?php echo e($value->user->name); ?></option>
+												<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+											<?php endif; ?>
+										</select>												
+									</div>
+								</div>
+										
+							<?php endif; ?>
+
+							<div class="col-md-12 col-12">
+								<div class="form-label-group">
+									<input type="text" class="form-control topic_name" placeholder="Sub Topic Name" name="topic_name" autocomplete="off">
+									<label for="first-name-column">Sub Topic Name (Manual)</label>
+								</div>
+							</div>
+							
+							<div class="col-md-6 col-12 pt-1">
+								<div class="form-label-group">
+									<input type="text" class="form-control timepicker start_time" placeholder="Start Time" name="start_time" autocomplete="off">
+									<label for="first-name-column">Start Time</label>
+								</div>
+							</div>
+							
+							<div class="col-md-6 col-12 pt-1">
+								<div class="form-label-group">
+									<input type="text" class="form-control timepicker end_time" placeholder="End Time" name="end_time" autocomplete="off">
+									<label for="first-name-column">End Time</label>
+								</div>
+							</div>
+							
+							<div class="col-md-12 col-12">
+								<div class="form-label-group">
+									<strong>Total Time (H:M) : <span class="total_time"></span> </strong>
+								</div>
+							</div>
+							
+							<div class="col-md-12 col-12">
+								<div class="form-label-group">
+									<input type="text" class="form-control remark" placeholder="Remark" name="remark" autocomplete="off" >
+									<label for="first-name-column">Remark</label>
+								</div>
+							</div>
+							
+							<!-- assistant assistantDropdown -->
+							<div class="col-md-12 col-12">
+    							<div> 
+									<label class="form-label-group mb-0"><h6><b>Select your name (Optional)</b></h6></label>
+    							    <select name="assistantID" class="form-control select2" id="assistantDropdown">
+    							        <option value="">Select</option>
+    							        <?php $__currentLoopData = $assistants; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $assistant): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+    							            <option value="<?php echo e($assistant->id); ?>"><?php echo e($assistant->name); ?></option>
+    							        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    							    </select>
+									<small class="pt-1">यदि logged In Account आपका नहीं है, तो यहाँ अपने नाम का चयन करके सबमिट करें।</small>
+    							</div>								
+							</div>
+
+							<div class="col-md-12 col-12 div_delay d-none">
+								<div class="form-label-group">
+									<label for="first-name-column">Delay Type</label>
+								    <select type="text" class="form-control delay_type" name="delay_type">
+								    	<option value="">Select Delay Type</option>
+								    	<option value="Technical Issue">Due to Technical Issue</option>
+								    	<option value="Due to Faculty">Due to Faculty</option>
+								    	<option value="Due to Managment">Due to Managment</option>
+								    </select>
+								</div>
+							</div>
+
+							<div class="col-md-12 col-12 div_early_delay d-none pt-3">
+								<div class="form-label-group">
+									<input type="text" class="form-control early_delay_reason" placeholder="Early/Delay Reason" name="early_delay_reason" autocomplete="off" >
+									<label for="first-name-column">Early/Delay Reason</label>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<input type="hidden" name="timetable_id" class="timetable_id" value="">
+				<input type="hidden" name="spent_id" class="spent_id" value="">
+				<div class="modal-footer" style="display: block;">
+					<div class="row">
+						<div class="col-md-4">
+						<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+						</div>
+						<div class="col-md-4 text-center">
+						<button type="button" class="btn btn-warning cancel-cls" >Cancel Class</button>
+						</div>
+						<div class="col-md-4">
+						<button type="submit" id="start_class_btn" class="btn btn-primary float-right">Submit</button>
+						</div>
+					</div>
+				</div>
+				<hr>
+				<div class="row col-12  chapter_topic_list p-2 mx-0">
+					
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+
+<?php $__env->stopSection(); ?>
+
+<?php $__env->startSection('scripts'); ?>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+<link href="<?php echo e(asset('laravel/public/css/jquery.timepicker.css')); ?>" rel="stylesheet"/>
+<script src="<?php echo e(asset('laravel/public/js/jquery.timepicker.js')); ?>"></script>
+<script src="<?php echo e(asset('laravel/public/admin/js/jquery.validate.min.js')); ?>"></script>
+
+<script type="text/javascript">
+	$("body").on("change", ".start_time,.end_time", function (e) {
+		var start_time = $('.start_time').val();
+		var end_time = $('.end_time').val();
+		var str0="01/01/1970 " + start_time;
+		var str1="01/01/1970 " + end_time;
+
+		var diff=(Date.parse(str1)-Date.parse(str0))/1000/60;
+		var hours=String(100+Math.floor(diff/60)).substr(1);
+		var mins=String(100+diff%60).substr(1);
+		$(".total_time").text(hours+':'+mins);
+
+		if($(".total_time").text()!=$(".total_time").attr("data-time")){
+			$(".div_early_delay").removeClass("d-none");
+			if(start_time!=$(".start_time").attr("data-time")){
+				$(".div_delay").removeClass("d-none");
+				$(".early_delay_reason").attr("required",true);
+				$(".delay_type").attr("required",true);
+			}
+		}else{
+			$(".div_delay").addClass("d-none");
+			$(".div_early_delay").addClass("d-none");
+			$(".early_delay_reason").attr("required",false);
+			$(".delay_type").attr("required",false);
+		}
+	});
+</script>
+
+
+<script type="text/javascript">
+	$(document).ready(function() {
+		$('.select-multiple1').select2({
+			placeholder: "Select Any",
+			allowClear: true
+		});
+		$('.select-multiple2').select2({
+			placeholder: "Select Any",
+			allowClear: true
+		});
+		$('.select-multiple3').select2({
+			placeholder: "Select Any",
+			allowClear: true
+		});
+		
+		$('.timepicker').timepicker({ 'step': 1, 'timeFormat': 'h:i A' });
+	});
+	
+	$("body").on("click", "#download_pdf", function (e) {
+		var data = {};
+		data.branch_id = $('.branch_id').val(),
+		data.branch_location = $('.branch_location').val(),
+		data.batch_id = $('.batch_id').val(),
+		data.faculty_id = $('.faculty_id').val(),
+		data.fdate = $('.fdate').val(),
+		data.tdate = $('.tdate').val(),
+		data.status = $('.status').val(),
+		data.type = $('.type').val(),
+		window.open("<?php echo URL::to('/studiomanager/'); ?>/faculty-report-pdf?" + Object.keys(data).map(function (k) {
+			return encodeURIComponent(k) + '=' + encodeURIComponent(data[k])
+		}).join('&'));
+	});
+</script>
+<script type="text/javascript">
+	
+	$(".cancel-cls").on("click", function(){
+        const confirm_cancel=prompt('Are you sure you want to cancel this class? Please type Yes:');
+		if (confirm_cancel === null || confirm_cancel.trim()!== 'Yes') {
+	        // User clicked "Cancel" or provided no input
+	        alert('Class cancellation aborted.');
+	        return;
+	    }
+
+	    if(!confirm('Are you sure to cancel this class')){
+			return;
+		}
+
+		var remark = $(".remark").val();
+		var early_delay_reason = $(".early_delay_reason").val();
+		var start_time = $(".start_time").val();
+		var end_time = $(".end_time").val();
+		var tt_id = $(".timetable_id").val();
+		var spent_id = $(".spent_id").val();
+		if(remark != ''){
+			 $.ajax({
+				headers: {
+					'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+				},      
+				type: "POST",
+				url : '<?php echo e(route('studiomanager.update-cancel-class')); ?>',
+				data : {'_token' : '<?php echo e(csrf_token()); ?>', 'remark': remark,'early_delay_reason': early_delay_reason, 'start_time': start_time, 'end_time': end_time, 'timetable_id': tt_id, 'spent_id': spent_id},
+				dataType : 'json',
+				success : function(data){
+					if(data.status == false){
+						swal("Error!", data.message, "error");
+						
+					} else if(data.status == true){
+						$('.spd_time'+data.spent_id).text(data.spd_time);
+						$('#submit_start_class_form').trigger("reset");	
+						$('#s_class').modal('hide');
+						swal("Done!", data.message, "success").then(function(){ 
+							// location.reload();
+						});
+					}
+				}
+			});
+		
+		}
+		else{
+			alert("Remark are required")
+		}
+	});
+
+	$(".get_start_class_data").on("click", function() {
+		$(".timetable_id").val('');
+		$(".start_time").val('');
+		$(".end_time").val('');
+		$(".topic_name").val('');
+		$(".remark").val('');
+		$(".early_delay_reason").val('');
+		var tt_id = $(this).attr("data-id");
+		var spnt_id = $(this).attr("data-spent-id");
+		$(".timetable_id").val(tt_id);
+		$(".spent_id").val(spnt_id);
+		
+		
+		$.ajax({
+			headers: {
+				'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+			},      
+			type: "POST",
+			url : '<?php echo e(route('admin.edit-start-class')); ?>',
+			data : {'_token' : '<?php echo e(csrf_token()); ?>', 'tt_id': tt_id},
+			dataType : 'json',
+			success : function(data){
+				if(data.status == false){
+					swal("Error!", data.message, "error");
+				} else if(data.status == true){
+					$(".total_time").text(data.total_spent_time);
+					$(".total_time").attr("data-time",data.total_spent_time);
+
+					$('.start_time').val(data.start_time);
+					$(".start_time").attr("data-time",data.start_time);
+
+					$('.end_time').val(data.end_time);
+
+                    if(!data.allow_edittime){
+                      $(".start_time").attr("readonly",true);
+                      $(".end_time").attr("readonly",true);
+                    }
+
+					$('.topic_name').val(data.topic_name);
+					$('.topic_name').val(data.chapter_name);
+					$('.remark').val(data.remark);
+					$('.early_delay_reason').val(data.early_delay_reason);
+
+
+					$('.htmlset').html(data.html);
+					$('.subject_name_set').text(data.subject_name);
+					$('.assistant_id').html(data.res);
+					
+					$('#s_class').modal({
+							backdrop: 'static',
+							keyboard: true, 
+							show: true
+					});
+
+					$(".chapter_topic_list").html("");
+
+					$('.topic_name').attr('readonly',false);
+					if(data.planer_not_batch==""){
+						$('.topic_name').attr('readonly',true);
+					}
+                    
+                    let batch_today_topic={};
+                    var batches=`<div class="text-dark text-bold text-left mb-2 row">`; 
+                    for(var i=0;i<data['planner'].length;i++){
+                    	var batch_id=data['planner'][i]['batch_id'];
+                    	var batch_name=data['planner'][i]['batch_name'];
+                    	
+                    	if(i==0){
+                    	 batches+=`<div class="col-md-6 col-12"><label class="plannerBatch-${batch_id}"><input type="radio" name="batche_planner" class="batche_planner" value="${batch_id}" checked="checked">&nbsp;${batch_name}</label></div>`;
+                    	}else{
+                    	 batches+=`<div class="col-md-6 col-12"><label class="plannerBatch-${batch_id}"><input type="radio" name="batche_planner" class="batche_planner" value="${batch_id}">&nbsp;${batch_name}</label></div>`;	
+                    	}
+
+                    	batch_today_topic[batch_id]=0;
+
+                    }
+
+                    batches+=`</div></div>`;
+                    $(".chapter_topic_list").append(batches);
+                    for(var i=0;i<data['planner'].length;i++){
+
+                    	var batch_id=data['planner'][i]['batch_id'];
+                    	var batch_name=data['planner'][i]['batch_name'];
+                    	var chapters=data['planner'][i]['chapters'];
+                    	var comman_chapters=data['planner'][i]['comman_chapters'];
+                        
+                        let batch_id_class=i!=0?batch_id+" d-none":batch_id;
+                    	var chapter_topic_status=`<div class="row planner_detail planner_`+batch_id_class+`">`;
+
+                    	var chapter_topic_list='<table class="table mx-1">';
+	                    chapter_topic_list+='<tr><td Colspan="5">'+batch_name+'</td></tr>';
+
+	                    chapter_topic_list+='<tr>';
+	                    chapter_topic_list+='<th>Class Date</th>';
+	                    chapter_topic_list+='<th>Topic Name</th>';
+                        chapter_topic_list+='<th> Duration </th>';
+	                    chapter_topic_list+='<th>Status </th>';
+	                    chapter_topic_list+='</tr>';
+	                    var topic_pending=topic_completed=topic_partially=0;
+
+						$.each(comman_chapters,function(key){
+	                        chapter_topic_list+=`<tr>`;
+	                        chapter_topic_list+=`<td>${comman_chapters[key]['cdate'] || 'N/A'}</td>`;
+	                        chapter_topic_list+=`<td>`+comman_chapters[key]['chapter_name']+`</td>`;
+                            chapter_topic_list+=`<td >`+comman_chapters[key]['duration']+` Min.</td>`;
+	                        var status='';
+	                        if(comman_chapters[key]['status']==null || comman_chapters[key]['status']==0){
+	                        	status="<span class='text-danger'><b>Pending</b></span>";
+	                        	topic_pending++;
+	                        }else if(comman_chapters[key]['status']==1){
+	                           status="<span class='text-success'><b>Completed</b></span>";
+	                        	topic_completed++;
+	                        }else if(comman_chapters[key]['status']==2){
+	                            status="<span class='text-primary'><b>Partially Completed</b></span>";
+	                        	topic_partially++;
+	                        }else if(comman_chapters[key]['status']==7){
+	                            status="<span class='text-info'><b>Today Topic</b></span>";
+
+	                        	batch_today_topic[batch_id]=7;
+	                        }else if(comman_chapters[key]['status']==8){
+	                            status="<span class='text-warning'><b>Dropped</b></span>";
+	                        	topic_partially++;
+	                        }
+
+	                        chapter_topic_list+=`<td>`+status+`</td>`;
+	                        chapter_topic_list+=`</tr>`;
+	                    });
+						
+	                    $.each(chapters,function(key){
+	                        chapter_topic_list+=`<tr>`;
+	                        chapter_topic_list+=`<td>${chapters[key]['cdate'] || 'N/A'}</td>`;
+	                        chapter_topic_list+=`<td>`+chapters[key]['chapter_name']+`</td>`;
+                            chapter_topic_list+=`<td >`+chapters[key]['duration']+` Min.</td>`;
+	                        var status='';
+	                        if(chapters[key]['status']==null || chapters[key]['status']==0){
+	                        	status="<span class='text-danger'><b>Pending</b></span>";
+	                        	topic_pending++;
+	                        }else if(chapters[key]['status']==1){
+	                           status="<span class='text-success'><b>Completed</b></span>";
+	                        	topic_completed++;
+	                        }else if(chapters[key]['status']==2){
+	                           status="<span class='text-primary'><b>Partially Completed</b></span>";
+	                        	topic_partially++;
+	                        }else if(chapters[key]['status']==7){
+	                            status="<span class='text-info'><b>Today Topic</b></span>";
+	                        	batch_today_topic[batch_id]=7;
+	                        	
+	                        }else if(chapters[key]['status']==8){
+	                            status="<span class='text-warning'><b>Dropped</b></span>";
+	                        	topic_partially++;
+	                        }
+
+	                        chapter_topic_list+=`<td>`+status+`</td>`;
+	                        chapter_topic_list+=`</tr>`;
+	                    });
+
+	                    chapter_topic_status+=`<div class="col-12 mb-2 text-center">
+	                      <span class="btn btn-info text-dark"><b>Total : `+(topic_completed+topic_pending+topic_partially)+`</b></span>
+	                      <span class="btn btn-success">Completed : `+topic_completed+`</span>
+						  <span class="btn btn-primary">Partially Completed : `+topic_partially+`</span>
+						  <span class="btn btn-danger">Pending : `+topic_pending+`</span>
+	                    </div>`;
+
+	                    chapter_topic_list+='</table>';
+
+	                    chapter_topic_list=chapter_topic_status+chapter_topic_list;
+	                    chapter_topic_list+="</div>";
+
+	                    $(".chapter_topic_list").append(chapter_topic_list);
+	                }
+
+	                //console.log(batch_today_topic);
+	                //batch_today_topic
+	                for (let id in batch_today_topic) {
+					    if (batch_today_topic[id] === 0) {
+					        document.querySelector(`.plannerBatch-${id}`).classList.add("text-danger");
+					    }
+					}
+
+				}
+			}
+		});	
+	});
+	
+	$(".get_start_class_data_old").on("click", function() {
+		$(".timetable_id").val('');
+		$(".start_time").val('');
+		$(".end_time").val('');
+		$(".topic_name").val('');
+		$(".remark").val('');
+		$(".early_delay_reason").val('');
+		var tt_id = $(this).attr("data-id");
+		var spnt_id = $(this).attr("data-spent-id");
+		$(".timetable_id").val(tt_id);
+		$(".spent_id").val(spnt_id);
+		
+		
+		$.ajax({
+			headers: {
+				'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+			},      
+			type: "POST",
+			url : '<?php echo e(route('studiomanager.edit-start-class')); ?>',
+			data : {'_token' : '<?php echo e(csrf_token()); ?>', 'tt_id': tt_id},
+			dataType : 'json',
+			success : function(data){
+				if(data.status == false){
+					swal("Error!", data.message, "error");
+				} else if(data.status == true){
+					$(".total_time").text(data.total_spent_time);
+					$(".total_time").attr("data-time",data.total_spent_time);
+
+					if(data.start_time != ''){
+						$('.start_time').val(data.start_time);
+						$(".start_time").attr("data-time",data.start_time);
+					}
+
+					if(data.end_time != ''){
+						$('.end_time').val(data.end_time);
+					}
+					if(data.topic_name != ''){
+						$('.topic_name').val(data.topic_name);
+					}
+					if(data.remark != ''){
+						$('.remark').val(data.remark);
+					}
+					if(data.early_delay_reason != ''){
+						$('.early_delay_reason').val(data.early_delay_reason);
+					}
+					if(data.html != ''){
+						$('.htmlset').html(data.html);
+					}
+					if(data.subject_name != ''){
+						$('.subject_name_set').text(data.subject_name);
+					}
+					if(data.res != ''){
+						$('.assistant_id').html('');
+						$('.assistant_id').html(data.res);
+					}
+					$('#s_class').modal({
+							backdrop: 'static',
+							keyboard: true, 
+							show: true
+					});
+
+					$(".chapter_topic_list").html("");
+                    var chapters=jQuery.parseJSON(data.chapters);
+                    var chapter_topic_list='<table class="table mx-1">';
+                    chapter_topic_list+='<tr>';
+                    chapter_topic_list+='<th>Class Date</th>';
+                    chapter_topic_list+='<th>Topic Name</th>';
+                    chapter_topic_list+='<th>Sub Topic</th>';
+                    chapter_topic_list+='<th> Duration </th>';
+                    chapter_topic_list+='<th>Status </th>';
+                    chapter_topic_list+='</tr>';
+                    var topic_pending=topic_completed=topic_partially=0;
+                    $.each(chapters,function(key){
+                        chapter_topic_list+=`<tr>`;
+	                    chapter_topic_list+=`<td>${chapters[key]['cdate'] || 'N/A'}</td>`;
+                        chapter_topic_list+=`<td>`+chapters[key]['chapter_name']+`</td>`;
+                        chapter_topic_list+=`<td >`+chapters[key]['topic_name']+`</td>`;
+                        chapter_topic_list+=`<td >`+chapters[key]['duration']+` Min.</td>`;
+                        
+                        var status='';
+                        if(chapters[key]['status']==null || chapters[key]['status']==0){
+                        	status="<span class='text-danger'><b>Pending</b></span>";
+                        	topic_pending++;
+                        }else if(chapters[key]['status']==1){
+                           status="<span class='text-success'><b>Completed</b></span>";
+                        	topic_completed++;
+                        }else if(chapters[key]['status']==2 || chapters[key]['status']==7){
+                           status="<span class='text-primary'><b>Partially Completed</b></span>";
+                        	topic_partially++;
+                        }
+
+                        chapter_topic_list+=`<td>`+status+`</td>`;
+                        chapter_topic_list+=`</tr>`;
+                    });
+
+                    var chapter_topic_status=`<div class="col-12 mb-2 text-center">
+                      <span class="btn btn-info text-dark"><b>Total : `+(topic_completed+topic_pending+topic_partially)+`</b></span>
+                      <span class="btn btn-success">Completed : `+topic_completed+`</span>
+					  <span class="btn btn-primary">Partially Completed : `+topic_partially+`</span>
+					  <span class="btn btn-danger">Pending : `+topic_pending+`</span>
+                    </div>`;
+
+                    chapter_topic_list+='</table>';
+
+                    chapter_topic_list=chapter_topic_status+chapter_topic_list;
+
+                    $(".chapter_topic_list").html(chapter_topic_list);
+
+				}
+			}
+		});	
+	});  
+	
+	$(document).on("change",".batche_planner",function(){
+        $(".planner_detail").addClass("d-none");
+        $(".planner_"+$(this).val()).removeClass("d-none");
+	});  
+
+
+	var $form = $('#submit_start_class_form');
+	validatereschedule = $form.validate({
+		ignore: [],
+		rules: {
+			topic_name : {
+				required: true,
+			},
+			start_time : {
+				required: true,
+			},
+			end_time : {
+				required: true,
+			}, 
+			'status[*]' : {
+				required: true,
+			}       
+		},
+
+		/* errorElement : "span",*/
+		errorClass : 'border-danger',
+		errorPlacement: function(error, element) {
+			if (element.is(':input') || element.is(':select')) {
+				$(this).addClass('border-danger');
+			}
+			else {
+				return true;
+			}
+		}
+	});
+	
+	$("#submit_start_class_form").submit(function(e) {
+		var form = document.getElementById('submit_start_class_form');
+		var dataForm = new FormData(form);
+		e.preventDefault();
+		if(validatereschedule.valid()){
+			$.ajax({
+				headers: {
+					'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+				},      
+				type: "POST",
+				url : '<?php echo e(route('studiomanager.update-start-class')); ?>',
+				data : dataForm,
+				processData : false,  
+				contentType : false,
+				dataType : 'json',
+				success : function(data){
+					if(data.status == false){
+						swal("Error!", data.message, "error");
+					} else if(data.status == true){
+						$('.spd_time'+data.spent_id).text(data.spd_time);
+						$('#submit_start_class_form').trigger("reset");
+						$('#s_class').modal('hide');
+						swal("Done!", data.message, "success").then(function(){ 
+							// location.reload();
+						});
+					}
+				}
+			});
+		}       
+	});
+	
+	$(document).on("change",".chapter_data", function () {
+		var chapter_name = $('option:selected', this).attr('data-chname');
+		var subject_id   = $('option:selected', this).attr('data-subject_id');
+		var course_id    = $('option:selected', this).attr('data-course_id');
+		var batch_id     = $('option:selected', this).attr('data-batch_id');
+		var chapter_id   = $('option:selected', this).val();
+		chapter_id+=",";batch_id+=",";
+		chapter_id=chapter_id.split(",");
+		batch_id=batch_id.split(",");
+		var _this=$(this).parents('.topic_row');
+		$.ajax({
+			type : 'POST',
+			url : '<?php echo e(route('studiomanager.get-topic')); ?>',
+			data : {'_token' : '<?php echo e(csrf_token()); ?>', 'course_id': course_id,'subject_id': subject_id,'chapter_id':chapter_id,'batch_id':batch_id},
+			dataType : 'html',
+			success : function (data){
+				$(_this).find('.topic_data').empty();
+				$(_this).find('.topic_data').append(data);
+			}
+		});
+	});
+
+	$(document).on("click",".remove_topic", function () {
+		$(this).parents(".topic_row").remove();
+	});
+
+	$(document).on("click",".addmore_topic", function () {
+		var dataId=$(this).attr("data-id");
+		var html=$(".topic_copy").html();
+		html=html.replace("remove_topic d-none","remove_topic");
+		html=html.replace("disabled_btn","");
+		$(".add_topic_row-"+dataId).append(html);
+	});
+
+	$(document).on("change",".chapter_data", function () {
+		var topic_txt=$('option:selected',this).text();
+		var topic_name=$(".topic_name").val();
+		topic_name=(topic_name!=""?(topic_name+","+topic_txt):topic_txt);
+		$(".topic_name").val(topic_name);
+	});
+
+	
+</script>
+
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.studiomanager', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /var/www/html/laravel/resources/views/studiomanager/faculty_reports/index.blade.php ENDPATH**/ ?>

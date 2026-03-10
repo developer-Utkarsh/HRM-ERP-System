@@ -1,0 +1,424 @@
+@extends('layouts.studiomanager')
+@section('content')
+<div class="app-content content">
+	<div class="content-overlay"></div>
+	<div class="header-navbar-shadow"></div>
+	<div class="content-wrapper">
+		<div class="content-header row">
+			<div class="content-header-left col-md-9 col-12 mb-2">
+				<div class="row breadcrumbs-top">
+					<div class="col-12">
+						<h2 class="content-header-title float-left mb-0">Faculty Hours Report</h2>
+						<div class="breadcrumb-wrapper col-12">
+							<ol class="breadcrumb">
+								<li class="breadcrumb-item"><a href="{{ route('studiomanager.dashboard') }}">Home</a>
+								</li>
+								<li class="breadcrumb-item active">List View</li>
+							</ol>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="content-body">
+			<!-- Data list view starts -->
+			<section id="data-list-view" class="data-list-view-header">
+				<div class="card">
+					<div class="card-content collapse show">
+						<div class="card-body">
+							<div class="users-list-filter">
+								<form action="{{ route('studiomanager.faculty-hours-reports') }}" method="get" name="filtersubmit">
+									<div class="row">
+
+										<div class="col-12 col-sm-6 col-lg-3 branch_loader">
+											<label for="users-list-status">Location</label>
+											<fieldset class="form-group">												
+												<select class="form-control branch_location" name="branch_location" id="">
+													<option value="">Select Any</option>
+													<option value="jaipur" @if('jaipur' == app('request')->input('branch_location')) selected="selected" @endif>jaipur</option>
+													<option value="jodhpur" @if('jodhpur' == app('request')->input('branch_location')) selected="selected" @endif>jodhpur</option>
+													<option value="prayagraj" @if('prayagraj' == app('request')->input('branch_location')) selected="selected" @endif>prayagraj</option>
+													<option value="indore" @if('indore' == app('request')->input('branch_location')) selected="selected" @endif>Indore</option>
+												</select>
+											</fieldset>
+										</div>
+
+										<div class="col-12 col-sm-6 col-lg-3">
+											<label for="users-list-status">Faculty</label>
+											<?php $faculty = \App\User::where('role_id', '2')->where('status', '1')->where('is_deleted', '0')->orderBy('id','desc')->get(); ?>
+											<fieldset class="form-group">												
+												<select class="form-control select-multiple2 faculty_id" name="faculty_id[]" multiple>
+													<option value="">Select Any</option>
+													@if(count($faculty) > 0)
+													@foreach($faculty as $key => $value)
+													<option value="{{ $value->id }}"  <?php if(!empty( app('request')->input('faculty_id')) && in_array($value->id, app('request')->input('faculty_id'))){ echo "selected"; } ?>>{{ $value->name }}</option>
+													@endforeach
+													@endif
+												</select>												
+											</fieldset>
+										</div>
+										<div class="col-12 col-sm-6 col-lg-3">
+											<div class="form-group">
+												<label for="first-name-column">Department Type</label>
+												@if(count($allDepartmentTypes) > 0)
+												<select class="form-control get_role select-multiple1 department_type" name="department_type" id="se_department_type">
+													<option value=""> - Select Any - </option>
+													@foreach($allDepartmentTypes as $value)
+													<option value="{{ $value['id'] }}" @if($value['id'] == app('request')->input('department_type')) selected="selected" @endif>{{ $value['name'] }}</option>
+													@endforeach
+												</select>
+												@endif
+											</div>
+										</div>
+										<div class="col-12 col-sm-6 col-lg-3">
+											<label for="users-list-status">Class Type</label>
+											 
+											<fieldset class="form-group">												
+												<select class="form-control online_class_type" name="online_class_type">
+													<option value=''>Select Class Type</option>
+																
+													<option value='Online Course Recording' @if('Online Course Recording' == app('request')->input('online_class_type')) selected="selected" @endif >Online Course Recording</option>
+													
+													<option value='YouTube Live' @if('YouTube Live' == app('request')->input('online_class_type')) selected="selected" @endif >YouTube Live</option>
+													
+													<option value='YouTube & App Live' @if('YouTube & App Live' == app('request')->input('online_class_type')) selected="selected" @endif >YouTube & App Live</option>
+													
+													<option value='Model Paper Recording' @if('Model Paper Recording' == app('request')->input('online_class_type')) selected="selected" @endif >Model Paper Recording</option>
+													
+													<option value='Offline' @if('Offline' == app('request')->input('online_class_type')) selected="selected" @endif >Offline</option>
+													
+													<option value='Offline & App live' @if('Offline & App live' == app('request')->input('online_class_type')) selected="selected" @endif >Offline & App live</option>
+													
+													<option value='App Live' @if('App Live' == app('request')->input('online_class_type')) selected="selected" @endif >App Live</option>
+												</select>												
+											</fieldset>
+										</div>
+										
+										<div class="col-12 col-sm-6 col-lg-3">											
+											<label for="users-list-status">Date</label>								
+											<fieldset class="form-group">																					
+												<input type="date" name="fdate" placeholder="Date" value="{{ app('request')->input('fdate') }}" class="form-control fdate">	
+											</fieldset>	
+										</div>	
+										
+										<div class="col-12 col-sm-6 col-lg-3">											
+											<label for="users-list-status">To Date</label>									
+											<fieldset class="form-group">																					
+												<input type="date" name="tdate" placeholder="Date" value="{{ app('request')->input('tdate') }}" class="form-control tdate">	
+											</fieldset>									
+										</div>										
+											
+									</div>
+									
+									<fieldset class="form-group" style="float:right;">		
+										<button type="submit" class="btn btn-primary">Search</button>
+										<a href="{{ route('studiomanager.faculty-hours-reports') }}" class="btn btn-warning">Reset</a>
+										<a href="javascript:void(0)" id="download_pdf" class="btn btn-primary">Export in PDF</a>
+										<a href="javascript:void(0)" id="download_excel" class="btn btn-primary">Export in Excel</a>
+									</fieldset>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="table-responsive">
+				
+					<table class="table data-list-view">
+						<thead>
+							<tr>
+								<th scope="col">S No.</th>
+								<th scope="col">Name</th>
+								<th scope="col">Contact No</th>
+								<th scope="col">Dapartment</th>
+								<th scope="col">Branch</th>
+								<th scope="col">Subject</th>
+								<th scope="col">A. Time</th>
+								<th scope="col">Schedule Time</th>
+								<th scope="col">Schedule Diffrence</th>
+								<th scope="col">Spent Time</th>
+								<th scope="col">Taken Diffrence</th>
+								<!--th scope="col">From Date</th>
+								<th scope="col">To Date</th-->
+							</tr>
+						</thead>
+						<tbody>
+							@if(count($get_faculty) > 0)
+							@php $s_no = 0; @endphp
+								@foreach($get_faculty as $key=>$get_faculty_val)
+								<?php
+								    $f_date = date('Y-m-d'); $t_date = date('Y-m-d');
+									if(!empty($selectFromDate)){
+										$f_date = $selectFromDate;
+									}
+									
+									if(!empty($selectToDate)){
+										$t_date = $selectToDate;
+									}
+
+									$whereCond  = ' 1=1';
+									
+									if(!empty($branch_location)){
+										$whereCond .= ' AND branches.branch_location = "'.$branch_location.'"';
+									}
+									
+									if(!empty($online_class_type)){
+										$whereCond .= ' AND timetables.online_class_type = "'.$online_class_type.'"';
+									}
+
+									$get_total_time = DB::table('timetables')
+													->select('timetables.from_time as start_time','timetables.to_time as end_time','timetables.is_cancel','subject.name','start_classes.start_time as start_classes_start_time','start_classes.end_time as start_classes_end_time')
+													->leftJoin('subject', 'subject.id', '=', 'timetables.subject_id')
+													->leftJoin('studios', 'studios.id', '=', 'timetables.studio_id')
+													->leftJoin('branches', 'branches.id', '=', 'studios.branch_id')
+													->leftJoin('start_classes', 'start_classes.timetable_id', '=', 'timetables.id')
+													->where('timetables.faculty_id', $get_faculty_val->id)
+													->where('timetables.time_table_parent_id', '0')
+													->whereRaw($whereCond)
+													->whereRaw(' timetables.cdate >= "'.$f_date.'" AND timetables.cdate <= "'.$t_date.'"')
+													->whereRaw("(timetables.is_deleted='0' OR timetables.is_deleted='2')")
+													->get();
+													
+												
+									$base_time2          = new DateTime('00:00');
+									$base_time          = new DateTime('00:00');
+									$total              = new DateTime('00:00');
+									$total2              = new DateTime('00:00');
+									$subject_arr        = array();
+									$schedule_total_tt           = "00 : 00 Hours"; 
+									$total_tt           = "00 : 00 Hours"; 
+									if(count($get_total_time) > 0){
+										foreach($get_total_time as $get_total_time_value){
+											array_push($subject_arr, $get_total_time_value->name);
+											$first_time = new DateTime($get_total_time_value->start_time);
+											$second_time = new DateTime($get_total_time_value->end_time);
+											$interval = $first_time->diff($second_time);
+											$base_time->add($interval);
+											
+											if($get_total_time_value->is_cancel != '1'){
+												$first_date = new DateTime($get_total_time_value->start_classes_start_time);
+												$second_date = new DateTime($get_total_time_value->start_classes_end_time);
+												$interval = $first_date->diff($second_date);
+												$base_time2->add($interval); 	
+											}												
+										}
+										
+										$baseDays = $total->diff($base_time)->format("%a");
+										$baseHours = $total->diff($base_time)->format("%H");
+										$baseMinute = $total->diff($base_time)->format("%I");
+										
+										$schedule_total_tt = ($baseDays*24)+$baseHours. ":" . $baseMinute;
+										
+										$totalDays = $total2->diff($base_time2)->format("%a");
+										$totalHours = $total2->diff($base_time2)->format("%H");
+										$totalMinute = $total2->diff($base_time2)->format("%I");
+										
+										$total_tt = ($totalDays*24)+$totalHours. ":" . $totalMinute;
+									}
+									if(!empty($branch_location) ){
+										if(count($get_total_time) > 0){
+										$s_no++;
+										?>
+										<tr>
+											<td class="product-category">{{ $s_no }}</td>
+											<td class="product-category">{{ $get_faculty_val->name }}</td>
+											<td class="product-category">{{ $get_faculty_val->mobile }}</td>
+											<td class="product-category">{{ $get_faculty_val->department_name }}</td>
+											<td class="product-category">{{ (count($subject_arr) > 0) ? implode(",", array_unique($subject_arr)) : '--' }}</td>
+											<td class="product-category">
+											<?php
+											if($get_faculty_val->agreement=='Yes'){
+												echo $get_faculty_val->committed_hours;
+											}
+											else{
+												echo "-";
+											}
+											?>
+											
+											</td>
+											<!--td class="product-category">{{ $total->diff($base_time)->format("%H:%I") }} Hours</td-->
+											<td class="product-category">{{ $schedule_total_tt }} Hours</td>
+											
+											<td class="">
+											<?php
+											if($get_faculty_val->agreement=='Yes'){
+												$h1s = $get_faculty_val->committed_hours*3600;
+												$h2s = (($baseDays*24)+$baseHours)*3600 + $baseMinute *60;
+												$rmTime = "";;
+												if($h1s > $h2s){
+													$seconds = $h1s - $h2s;
+												}
+												else{
+													$rmTime="-";
+													$seconds = $h2s - $h1s;
+												}
+												$rmTime =$rmTime . sprintf("%02d:%02d", floor($seconds / 3600), ($seconds / 60) % 60);
+												echo $rmTime. " Hours";
+											}
+											else{
+												echo "-";
+											}
+											?>
+											</td>
+											
+											<td class="product-category">{{ $total_tt }} Hours</td>
+											
+											<td class="">
+											<?php
+											if($get_faculty_val->agreement=='Yes'){
+												$h1s = $get_faculty_val->committed_hours*3600;
+												$h2s = (($totalDays*24)+$totalHours)*3600 + $totalMinute *60;
+												$rmTime = "";;
+												if($h1s > $h2s){
+													$seconds = $h1s - $h2s;
+												}
+												else{
+													$rmTime="-";
+													$seconds = $h2s - $h1s;
+												}
+												$rmTime =$rmTime . sprintf("%02d:%02d", floor($seconds / 3600), ($seconds / 60) % 60);
+												echo $rmTime. " Hours";
+											}
+											else{
+												echo "-";
+											}
+											?>
+											</td>
+										</tr>
+										<?php
+										}
+
+									}
+									else{
+										$s_no++;	
+								?>
+								<tr>
+									<td class="product-category">{{ $s_no }}</td>
+									<td class="product-category">{{ $get_faculty_val->name }}</td>
+									<td class="product-category">{{ $get_faculty_val->mobile }}</td>
+									<td class="product-category">{{ $get_faculty_val->department_name }}</td>
+									<td class="product-category">{{ $get_faculty_val->bname }}</td>
+									<td class="product-category">{{ (count($subject_arr) > 0) ? implode(",", array_unique($subject_arr)) : '--' }}</td>
+									<td class="product-category">
+									<?php
+									if($get_faculty_val->agreement=='Yes'){
+										echo $get_faculty_val->committed_hours;
+									}
+									else{
+										echo "-";
+									}
+									?>
+									</td>
+									<td class="product-category">{{ $schedule_total_tt }} Hours</td>
+									
+									<td class="">
+									<?php
+									if($get_faculty_val->agreement=='Yes'){
+										$h1s = $get_faculty_val->committed_hours*3600;
+										$h2s = (($baseDays*24)+$baseHours)*3600 + $baseMinute *60;
+										$rmTime = "";;
+										if($h1s > $h2s){
+											$seconds = $h1s - $h2s;
+										}
+										else{
+											$rmTime="-";
+											$seconds = $h2s - $h1s;
+										}
+										$rmTime =$rmTime . sprintf("%02d:%02d", floor($seconds / 3600), ($seconds / 60) % 60);
+										echo $rmTime. " Hours";
+									}
+									else{
+										echo "-";
+									}
+									?>
+									</td>
+									<td class="product-category">{{ $total_tt }} Hours</td>
+									<td class="">
+									<?php
+									if($get_faculty_val->agreement=='Yes'){
+										$h1s = $get_faculty_val->committed_hours*3600;
+										$h2s = (($totalDays*24)+$totalHours)*3600 + $totalMinute *60;
+										$rmTime = "";;
+										if($h1s > $h2s){
+											$seconds = $h1s - $h2s;
+										}
+										else{
+											$rmTime="-";
+											$seconds = $h2s - $h1s;
+										}
+										$rmTime =$rmTime . sprintf("%02d:%02d", floor($seconds / 3600), ($seconds / 60) % 60);
+										echo $rmTime. " Hours";
+									}
+									else{
+										echo "-";
+									}
+									?>
+									</td>
+									<!--td class="product-category">{{ $f_date }}</td>
+									<td class="product-category">{{ $t_date }}</td-->
+								</tr>
+								<?php
+									}
+								?>
+								@endforeach
+							@else
+								<tr>
+									<td class="text-center" colspan="8">No Record Found</td>
+								</tr>								
+							@endif
+						</tbody>
+					</table>
+					 
+				</div>       
+				
+			</section>
+		</div>
+	</div>
+</div>
+@endsection
+
+@section('scripts')
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		$('.select-multiple1').select2({
+			placeholder: "Select Any",
+			allowClear: true
+		});
+		$('.select-multiple2').select2({
+			placeholder: "Select Any",
+			allowClear: true
+		});
+		$('.select-multiple3').select2({
+			placeholder: "Select Any",
+			allowClear: true
+		});
+	});
+	
+	$("body").on("click", "#download_excel", function (e) {
+		var data = {};
+		data.faculty_id = $("[name='faculty_id[]']").val(),
+		data.fdate = $('.fdate').val(),
+		data.tdate = $('.tdate').val(),
+		data.branch_location = $('.branch_location').val(),
+		data.online_class_type = $('.online_class_type').val(),
+		data.department_type = $('.department_type').val(),
+		window.location.href = "<?php echo URL::to('/studiomanager/'); ?>/faculty-hours-report-excel?" + Object.keys(data).map(function (k) {
+			return encodeURIComponent(k) + '=' + encodeURIComponent(data[k])
+		}).join('&');
+	});
+	
+	$("body").on("click", "#download_pdf", function (e) {
+		var data = {}; 
+		data.faculty_id = $("[name='faculty_id[]']").val(),
+		data.fdate = $('.fdate').val(),
+		data.tdate = $('.tdate').val(),
+		data.branch_location = $('.branch_location').val(),
+		data.online_class_type = $('.online_class_type').val(),
+		data.department_type = $('.department_type').val(),
+		window.location.href = "<?php echo URL::to('/studiomanager/'); ?>/faculty-hours-report-pdf?" + Object.keys(data).map(function (k) {
+			return encodeURIComponent(k) + '=' + encodeURIComponent(data[k])
+		}).join('&');
+	});
+</script>
+@endsection

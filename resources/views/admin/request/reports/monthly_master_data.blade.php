@@ -1,0 +1,250 @@
+@extends('layouts.admin')
+@section('content')
+<div class="app-content content">
+	<div class="content-overlay"></div>
+	<div class="header-navbar-shadow"></div>
+	<div class="content-wrapper">
+		<div class="content-header row">
+			<div class="content-header-left col-md-12 col-12 mb-2">
+				<div class="row breadcrumbs-top">
+					<div class="col-8">
+						<h2 class="content-header-title float-left mb-0">Monthly PO/WO VS Invoice</h2>
+						<div class="breadcrumb-wrapper col-12">
+							<ol class="breadcrumb">
+								<li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a>
+								</li>
+								<li class="breadcrumb-item active">List View</li>
+							</ol>
+						</div>
+					</div>
+					<div class="col-4 text-right">
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="content-body">			
+			<section id="data-list-view" class="data-list-view-header">	
+				<div class="card">
+					<div class="card-content collapse show">
+						<div class="card-body">
+							<div class="users-list-filter">
+								<form action="{{ route('admin.request.reports.monthly-master-data') }}" method="get" name="filtersubmit">
+									<div class="row">
+										<div class="col-12 col-sm-6 col-lg-2">
+											<fieldset class="form-group">
+												<label for="users-list-status">Month</label>
+												<input type="month" class="form-control" name="fmonth" placeholder="Month" value="{{ app('request')->input('fmonth')??date('Y-m') }}">
+											</fieldset>
+										</div>
+										<div class="col-12 col-sm-6 col-lg-3">
+											<label for="users-list-status">Branch</label>
+											<?php 
+											$branch_location = app('request')->input('branch_id');
+											$branches = \App\Branch::where('status', '1'); 
+											if(!empty($branch_location)){
+												$branches->where('id', $branch_location);
+											}
+											$branches = $branches->orderBy('id','desc')->get();											
+											?>
+											<fieldset class="form-group">												
+												<select class="form-control select-multiple branch_id" name="branch_id">
+													<option value="">Select Any</option>
+													@if(count($branches) > 0)
+													@foreach($branches as $key => $value)
+													<option value="{{ $value->id }}" @if($value->id == app('request')->input('branch_id')) selected="selected" @endif>{{ $value->name }}</option>
+													@endforeach
+													@endif
+												</select>												
+											</fieldset>
+										</div>
+										<div class="col-12 col-sm-6 col-lg-2">
+											<label for="users-list-status">Location</label>
+											<?php 
+											$location = app('request')->input('location_id');
+											$blocation = \App\Branch::where('status', '1'); 
+											if(!empty($location)){
+												$blocation->where('branch_location', $location);
+											}
+											$blocation = $blocation->orderBy('id','desc')->groupby('branch_location')->get();											
+											?>
+											<fieldset class="form-group">												
+												<select class="form-control select-multiple location_id" name="location_id">
+													<option value="">Select Any</option>
+													@if(count($blocation) > 0)
+													@foreach($blocation as $key => $value)
+													<option value="{{ $value->branch_location }}" @if($value->branch_location == app('request')->input('location_id')) selected="selected" @endif>{{ $value->branch_location }}</option>
+													@endforeach
+													@endif
+												</select>												
+											</fieldset>
+										</div>
+										<div class="col-12 col-sm-6 col-lg-5 pt-2">
+											<button type="submit" class="btn btn-primary">Search</button>
+											<a href="{{ route('admin.request.reports.monthly-master-data') }}" class="btn btn-warning">Reset</a>
+											<button type="button" class="btn btn-primary" id="downloadBtn">Export</a>
+										</div>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="table-responsive" id="tableData">
+					<table class="table data-list-view">
+						<thead>
+							<tr>
+								<th>S. No.</th>
+								<th>Date</th>
+								<th>Req. Type</th>
+								<th>Request No.</th>
+								<th>Employee</th>
+								<th>Category</th>
+								<th>Sub Category</th>
+								<th>Product</th>
+								<th>Description</th>
+								<th>UOM</th>
+								<th>Qty</th>								
+								<th>Rate</th>
+								<th>Amount</th>										
+								<th>GST</th>		
+								<th>GST Amt</th>		
+								<th>Total Amt</th>
+								<th>PO No</th>		
+								<th>PO Amount</th>
+								<th>PO Vendor</th>	
+								<th>Payment Type</th>		
+								<th>Date Of Invoice</th>		
+								<th>Invoice No</th>	
+								<th>Invoice Amount</th>	
+								<th>Remark</th>	
+								<th>Invoice Vendor</th>
+								<th>Branch</th>	
+								<th>City</th>	
+								<th>GRN</th>	
+							</tr>
+						</thead>
+						<tbody>	
+							<?php 
+								$i = 1; 
+								foreach($record as $re){ 
+							?>
+							<tr>
+								<td>{{ $i }}</td>
+								<td>{{ date('d-m-Y', strtotime($re->created_at)) }}</td>
+								<td><?php if($re->request_type=='1'){ echo 'WRL'; }else{ echo 'MRL';} ?></td>
+								<td>REQ-{{ $re->unique_no }}</td>
+								<td>{{ $re->name }}</td>
+								<td>{{ $re->cname }}</td>
+								<td>{{ $re->sname }}</td>
+								<td>{{ $re->pname }}</td>
+								<td>{{ $re->requirement }}</td>
+								
+								<td>{{ $re->uom }}</td>
+								<td>{{ $re->qty }}</td>
+								<td>{{ $re->rate }}</td>
+								<td>{{ $re->amount }}</td>
+								<td>{{ $re->gst_rate }}</td>
+								<td>{{ $re->gst_amt }}</td>
+								<td>{{ $re->total }}</td>
+								
+								<td><?php if($re->po_no!=0){ echo 'UTKPO-'.$re->po_location.'-'.$re->po_no.'/'.$re->po_month; } ?></td>
+								<td>{{ $re->po_amt }}</td>
+								<td>{{ $re->po_vendor }}</td>								
+								<td>
+									<?php 
+										if($re->type==1){ 
+											echo 'Credit'; 
+										}else if($re->type==2){ 
+											echo 'Cash'; 
+										}
+									?>
+								</td>
+								<td>{{ $re->date_of_invoice }}</td>
+								<td>{{ $re->invoice_no }}</td>
+								<td>{{ $re->Invoive_Amt }}</td>
+								<td>{{ $re->remark }}</td>
+								<td>{{ $re->invoice_vendor }}</td>
+								<td>{{ $re->branch }}</td>
+								<td>{{ ucwords($re->branch_location) }}</td>
+								<td>
+									<?php 
+										if($re->emp_grn!=0){ 
+											$name = $re->branch;
+											$words = explode(" ", $name);
+											$firstLetters = "";
+		
+											foreach ($words as $word) {
+												$firstLetters .= substr($word, 0, 1);
+											}
+											
+											if($re->request_type==1){
+												$ctext = "SRN";
+											}else{
+												$ctext = "GRN";
+											}
+											
+											echo '<b>'.$ctext.' :</b> '.$re->short_name.'/UTK/'.$firstLetters.'/'.date('d-m-Y',strtotime($re->created_at)).'/'.$re->emp_grn;   
+										} 
+									?>
+								</td>
+							</tr>
+							<?php $i++; } ?>
+						</tbody>
+					</table>
+				</div>
+				                  
+			</section>
+		</div>
+	</div>
+</div>
+
+<style type="text/css">
+	.table tbody td {
+		word-break: break-word;
+	}
+</style>
+@endsection
+
+@section('scripts')
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		$('.select-multiple').select2({
+			placeholder: "Select",
+			allowClear: true,
+			width: '100%'
+		});
+	});
+	
+	$(document).ready(function() {
+		$('#downloadBtn').click(function() {
+			var table = document.getElementById('tableData');
+			var wb = XLSX.utils.table_to_book(table, {sheet: "Sheet1"});
+			var wbout = XLSX.write(wb, {bookType: 'xlsx', type: 'binary'});
+			
+			function s2ab(s) {
+				var buf = new ArrayBuffer(s.length);
+				var view = new Uint8Array(buf);
+				for (var i = 0; i < s.length; i++) {
+					view[i] = s.charCodeAt(i) & 0xFF;
+				}
+				return buf;
+			}
+
+			saveAs(new Blob([s2ab(wbout)], {type: "application/octet-stream"}), 'table_data.xlsx');
+		});
+	});
+
+	// Include FileSaver.js (https://github.com/eligrey/FileSaver.js)
+	function saveAs(blob, fileName) {
+		var a = document.createElement('a');
+		a.href = URL.createObjectURL(blob);
+		a.download = fileName;
+		a.click();
+		URL.revokeObjectURL(a.href);
+	}
+</script>
+@endsection

@@ -1,0 +1,151 @@
+
+<?php $__env->startSection('content'); ?>
+
+<div class="app-content content">
+	<div class="content-overlay"></div>
+	<div class="header-navbar-shadow"></div>
+	<div class="content-wrapper">
+		<div class="content-header row">
+			<div class="content-header-left col-md-12 col-12 mb-2">
+				<div class="row breadcrumbs-top">
+					<div class="col-md-8">
+						<h2 class="content-header-title float-left mb-0">Sub Category</h2>
+						<div class="breadcrumb-wrapper col-12">
+							<ol class="breadcrumb">
+								<li class="breadcrumb-item"><a href="<?php echo e(route('admin.dashboard')); ?>">Home</a>
+								</li>
+								<li class="breadcrumb-item active">List View</li>
+							</ol>
+						</div>
+					</div>
+					
+					<div class="col-md-3"><a href="javascript:void(0)" class="btn btn-outline-primary float-right get_edit_data" data-cat-id="<?php echo e($cat_id); ?>">Add Sub Category</a></div>
+					
+					<div class="col-md-1"><a href="<?php echo e(route('admin.category.index')); ?>" class="btn btn-outline-primary float-right"><i class="feather icon-arrow-left"></i></a></div>
+				</div>
+			</div>
+		</div>
+		<div class="content-body">
+			<section id="data-list-view" class="data-list-view-header">
+				
+				<div class="table-responsive">
+					<table class="table data-list-view" id="TableSearch">
+						<thead>
+							<tr>
+								<th>S. No.</th>
+								<th>Category</th>
+								<th>Sub Category</th>
+								<th>Create</th>
+								<th>Action</th>
+							</tr>
+						</thead>
+						<tbody>
+						<?php if(count($sub_category) > 0): ?>
+							<?php $__currentLoopData = $sub_category; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $sub_category_value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+							<?php 
+							$cat_name = DB::table('category')->where('id', $sub_category_value->parent)->first();
+							?>
+							<tr>
+								<td><?php echo e($key + 1); ?></td>
+								
+								<td class="product-category"><?php echo e($cat_name->name ? $cat_name->name : ''); ?></td>
+								<td class="product-category"><?php echo e($sub_category_value->name ? $sub_category_value->name : ''); ?></td>
+								<td class="product-category"><?php echo e($sub_category_value->created_at ? $sub_category_value->created_at : ''); ?></td>
+								<td class="product-action">
+									<a title="Update Sub Category" href="javascript:void(0)"  data-id="<?php echo e($sub_category_value->id); ?>" data-parent="<?php echo e($sub_category_value->parent); ?>" class="get_edit_data">
+										<span class="action-edit"><i class="feather icon-edit"></i></span>
+									</a>
+									
+									<!--
+									<a href="<?php echo e(route('admin.category.delete', $sub_category_value->id)); ?>" onclick="return confirm('Are You Sure To Delete Category')">
+										<span class="action-delete"><i class="feather icon-trash"></i></span>
+									</a>
+									-->
+								</td>
+							</tr>
+							<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+						<?php else: ?>
+						<tr ><td class="text-center text-primary" colspan="5">No Record Found</td></tr>
+						<?php endif; ?>	
+						</tbody>
+					</table>
+				</div>                   
+			</section>
+			
+
+		</div>
+	</div>
+</div>
+
+
+<div class="modal" id="myModal">
+	  <div class="modal-dialog">
+		<div class="modal-content">
+
+		  <!-- Modal Header -->
+		  <div class="modal-header">
+			<h4 class="modal-title">Sub Category</h4>
+			<button type="button" class="close" data-dismiss="modal">&times;</button>
+		  </div>
+
+		  <form method="post" action="<?php echo e(route('admin.sub-category-edit-store')); ?>">
+				<?php echo e(csrf_field()); ?>
+
+			  <!-- Modal body -->
+			  <div class="modal-body fill-name">
+			  </div>
+
+			  <!-- Modal footer -->
+			  <div class="modal-footer">
+				<button type="submit" class="btn btn-primary">Save</button>
+				<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+			  </div>
+		  </form>
+
+		</div>
+	  </div>
+	</div>
+
+
+<?php $__env->stopSection(); ?>
+<?php $__env->startSection('scripts'); ?>
+
+<script src="<?php echo e(asset('laravel/public/admin/js/jquery.validate.min.js')); ?>"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		$('.select-multiple12').select2({
+			placeholder: "Select Category",
+			allowClear: true
+		});
+	});
+</script>
+<script type="text/javascript">
+	$(".get_edit_data").on("click", function() {  
+		var sub_cat_id = $(this).attr("data-id"); 
+		var parent_id  = $(this).attr("data-parent"); 
+		var cat_id     = $(this).attr("data-cat-id");
+
+		$('#myModal').modal({
+				backdrop: 'static',
+				keyboard: true, 
+				show: true
+		});
+		
+		$.ajax({
+			type : 'POST',
+			url : '<?php echo e(route('admin.edit-sub-category')); ?>',
+			data : {'_token' : '<?php echo e(csrf_token()); ?>', 'sub_cat_id': sub_cat_id, 'parent_id': parent_id, 'cat_id': cat_id},
+			dataType : 'html',
+			success : function (data){
+				$('.fill-name').empty();
+				
+				$('.fill-name').html(data);
+			}
+		});
+	}); 
+</script>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.admin', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /var/www/html/laravel/resources/views/admin/category/sub-category.blade.php ENDPATH**/ ?>

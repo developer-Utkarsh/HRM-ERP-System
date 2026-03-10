@@ -1,0 +1,247 @@
+@extends('layouts.admin')
+@section('content')
+<div class="app-content content">
+	<div class="content-overlay"></div>
+	<div class="header-navbar-shadow"></div>
+	<div class="content-wrapper">
+		<div class="content-header row">
+			<div class="content-header-left col-md-9 col-12 mb-2">
+				<div class="row breadcrumbs-top">
+					<div class="col-12">
+						<h2 class="content-header-title float-left mb-0">Attendance</h2>
+						<div class="breadcrumb-wrapper col-12">
+							<ol class="breadcrumb">
+								<li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a>
+								</li>
+								<li class="breadcrumb-item active">List View</li>
+							</ol>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="content-body">
+			<!-- Data list view starts -->
+			<section id="data-list-view" class="data-list-view-header">
+				<div class="card">
+					<div class="card-content collapse show">
+						<div class="card-body">
+							<div class="users-list-filter">
+								<form action="{{ route('admin.attendance.index') }}" method="get" name="filtersubmit">
+									<div class="row">
+									    @if(Auth::user()->role_id != 20)
+										<div class="col-md-3">
+											<label for="users-list-role">Employee Name</label>
+											<fieldset class="form-group">
+												<input type="text" class="form-control name" name="name" placeholder="Name, EMP Code" value="{{ app('request')->input('name') }}" id="myInputSearch" onkeyup="myFunctionSearch()">
+											</fieldset>
+										</div>
+										@endif
+										@if(Auth::user()->role_id == 24 || Auth::user()->role_id == 29)
+										<div class="col-md-3">
+											<div class="form-group">
+												<label for="first-name-column">Branch</label>
+												@if(count($allBranches) > 0)
+												<select class="form-control get_role select-multiple1 branch_id" name="branch_id">
+													<option value=""> - Select Any - </option>
+													@foreach($allBranches as $value)
+													<option value="{{ $value['id'] }}" @if($value['id'] == app('request')->input('branch_id')) selected="selected" @endif>{{ $value['name'] }}</option>
+													@endforeach
+												</select>
+												@endif
+											</div>
+										</div>
+										<div class="col-md-2">
+											<div class="form-group">
+												<label for="first-name-column">Department Type</label>
+												@if(count($allDepartmentTypes) > 0)
+												<select class="form-control get_role select-multiple1 department_type" name="department_type">
+													<option value=""> - Select Any - </option>
+													@foreach($allDepartmentTypes as $value)
+													<option value="{{ $value['id'] }}" @if($value['id'] == app('request')->input('department_type')) selected="selected" @endif>{{ $value['name'] }}</option>
+													@endforeach
+												</select>
+												@endif
+											</div>
+										</div>
+										
+										@endif
+										<div class="col-md-2">
+											<label for="users-list-verified">From</label>
+											<fieldset class="form-group">
+												<input type="date" name="fdate" class="form-control StartDateClass fdate" value="{{ app('request')->input('fdate') }}" id="">
+											</fieldset>
+										</div>
+										<div class="col-md-2">
+											<label for="users-list-verified">To</label>
+											<fieldset class="form-group">
+												<input type="date" name="tdate" class="form-control EndDateClass tdate" value="{{ app('request')->input('tdate') }}" id="">
+											</fieldset>
+										</div>
+									</div>
+									<fieldset class="form-group" style="float:right;">		
+									<button type="submit" class="btn btn-primary">Search</button>
+									<a href="{{ route('admin.attendance.index') }}" class="btn btn-warning">Reset</a>
+									<a href="javascript:void(0)" id="download_excel" class="btn btn-primary">Export in Excel</a>
+									</fieldset>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="table-responsive">
+					<table class="table data-list-view" style="background:#fff;" id="TableSearch">
+						<thead style="text-align: ;">
+							<tr>
+								<th>S. No.</th>
+								<th>Employee Name</th>
+								<th>Date</th>
+								<th>In Time</th>
+								<th>Out Time</th>
+								<th>Total Duration</th>
+								@if(Auth::user()->role_id != 20 && Auth::user()->role_id != 21)
+								<th>Action</th>
+								@endif
+							</tr>
+						</thead>
+						<tbody >
+						<?php
+						$i = 1;
+							foreach($responseArray as  $key => $value){
+							?>
+							<tr >
+								<td><?=$i++;?></td>
+								<td class="product-category">{{ isset($value['name']) ?  $value['name'] : '' }}</td>
+								<td class="product-category">{{ isset($value['date']) ?  $value['date'] : '' }}</td>
+								<td class="product-category" colspan="2">
+								<table class="table data-list-view" style="background: #f7f7f73d;">
+									<?php
+									// echo "<pre>"; print_R($value['time']); die;
+									$total_minute = 0;
+									foreach($value['time'] as $time_details){
+										?>
+										<tr>
+											<td style="width:200px;"><?php
+											if(!empty($time_details['in_time'])){
+												echo date("h:i A", strtotime($time_details['in_time']));
+											}
+											
+											?></td>
+											<td><?php
+											if(!empty($time_details['out_time'])){
+												echo date("h:i A", strtotime($time_details['out_time']));
+											}
+											?></td>
+										</tr>
+										<?php
+											if(!empty($time_details['in_time']) && !empty($time_details['out_time'])){
+												$intime = new DateTime($time_details['in_time']);
+												$outtime = new DateTime($time_details['out_time']);
+												$interval = $intime->diff($outtime);
+												$hours = $interval->format('%H');
+												$minute = $interval->format('%I');
+												$total_minute += ($hours*60)+$minute;
+											}
+									}
+									?>
+									
+									
+								</table>
+								</td>
+								<td class="product-category">
+								<?php
+								$total_hours = "00:00";
+								if($total_minute > 0){
+									$format = '%02d:%02d';
+									$totalhours = floor($total_minute / 60);
+									$totalminutes = ($total_minute % 60);
+									$total_hours = sprintf($format, $totalhours, $totalminutes);
+								}
+								echo $total_hours ." Hour";
+								?>
+								</td>
+								<td class="product-action">
+									
+									<?php
+									if(Auth::user()->role_id != 20 && Auth::user()->role_id != 21){
+									?>
+									<a href="{{ route('admin.attendance.edit', 
+											[
+												'emp_id' => $value['emp_id'], 
+												'date' => $value['date']
+											]) }}" class=""><span class="action-edit"><i class="feather icon-edit"></i></span></a>
+									 
+									<?php
+									}
+									?>
+								</td>
+							</tr>
+							<?php
+							}
+							?>
+							
+							<style>
+							table{border: 2px solid #f8f8f8;}
+							</style>
+						</tbody>
+					</table>
+				</div>                   
+			</section>
+		</div>
+	</div>
+</div>
+@endsection
+
+@section('scripts')
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+<script type="text/javascript">
+	
+$(document).ready(function() {
+	$('.select-multiple1').select2({
+		placeholder: "Select Any",
+		allowClear: true
+	});
+	$('.select-multiple2').select2({
+		placeholder: "Select Any",
+		allowClear: true
+	});
+	
+	$('#example').DataTable();
+});
+
+$("body").on("click", "#download_excel", function (e) {
+
+	var data = {};
+		data.branch_id = $('.branch_id').val(),
+		data.name = $('.name').val(),
+		data.fdate = $('.fdate').val(),
+		data.tdate = $('.tdate').val(),
+		data.department_type = $('.department_type').val(),
+	window.location.href = "<?php echo URL::to('/admin/'); ?>/attendance-report-excel?" + Object.keys(data).map(function (k) {
+		return encodeURIComponent(k) + '=' + encodeURIComponent(data[k])
+	}).join('&');
+});
+</script>
+
+<script>
+function myFunctionSearch() {
+  var input, filter, table, tr, td, i, txtValue;
+  input = document.getElementById("myInputSearch");
+  filter = input.value.toUpperCase();
+  table = document.getElementById("TableSearch");
+  tr = table.getElementsByTagName("tr");
+  for (i = 0; i < tr.length; i++) {
+    td = tr[i].getElementsByTagName("td")[1];
+    if (td) {
+      txtValue = td.textContent || td.innerText;
+      if (txtValue.toUpperCase().indexOf(filter) > -1) {
+        tr[i].style.display = "";
+      } else {
+        tr[i].style.display = "none";
+      }
+    }       
+  }
+}
+</script>
+@endsection

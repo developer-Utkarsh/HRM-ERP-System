@@ -1,0 +1,122 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\SupportCategory;
+use App\Enquiry;
+use Input;
+use Validator;
+use DB;
+
+
+class SupportCategoryController extends Controller
+{
+    
+    public function index()
+    {
+  		$name   = Input::get('name');
+        $category = SupportCategory::where('is_deleted', '0')->orderBy('id', 'desc')->where('name', 'LIKE', '%' . $name . '%')->get();
+        return view('admin.support_category.category', compact('category'));
+    }
+
+    public function store(Request $request)
+    {
+        $validation = Validator::make( $request->all(), [
+			'name'=>'unique:support_category,name,'.$request->id,
+		]);
+		
+		if ( $validation->fails() ) {
+			return redirect()->route('admin.support_category.index')->with('error', 'Category Already Exits');
+		}
+		
+		$inputs = $request->only('name'); 
+		
+		if(!empty($request->id)){
+			$categoryId  = SupportCategory::where('id', $request->id)->first();
+			$cat_res  = $categoryId->update($inputs);
+			$msg = "Category Update Successfully";
+		}
+		else{
+			$category = SupportCategory::create($inputs); 
+			$cat_res  = $category->save();
+			$msg = "Category Added Successfully";
+		}
+    
+
+        if($cat_res) {
+            return redirect()->route('admin.support_category.index')->with('success', $msg);
+        } else {
+            return redirect()->route('admin.support_category.index')->with('error', 'Something Went Wrong !');
+        }
+    }
+	
+    public function destroy($id)
+    {   
+        $category = SupportCategory::find($id);
+		$inputs = array('is_deleted' => '1');
+		
+        if ($category->update($inputs)) {
+            return redirect()->back()->with('success', 'Category Deleted Successfully');
+        } else {
+            return redirect()->route('admin.support_category.index')->with('error', 'Something Went Wrong !');
+        }
+    }
+
+	
+	public function edit_category(Request $request){
+		$cat_id  = $request->cat_id;  
+        $respnse = SupportCategory::where([['id', '=', $cat_id]])->first();
+		
+        if (!empty($respnse))
+        {
+            $res = "";
+			$res .= "<label>Category:</label><input type='text' name='name' class='form-control' value='" . $respnse->name . "'><input type='hidden' name='id' class='form-control' value='" . $respnse->id . "'>";
+            
+			echo $res;
+            exit();
+        }
+        else
+        {
+            echo $res = "<label>Category:</label>";
+            die();
+        }
+	}
+
+    public function togglePublish($id) {
+        $support_category = SupportCategory::find($id);
+        if (is_null($support_category)) {
+            return redirect()->route('admin.support_category.index')->with('error', 'Category not found');
+        }
+		
+		if($support_category->status == 'Active'){
+			$sts = 'Inactive';
+		}
+		else{
+			$sts = 'Active';
+		}
+		
+		$support_category->update([
+                'status' => $sts,
+                'updated_at' => new \DateTime(),
+            ]);
+        return redirect()->route('admin.support_category.index')->with('success', 'Status Updated Successfully.');
+    }
+	
+	public function support_dashboard(Request $request){
+		$active_query = Enquiry::where("status", "PENDING")->count();
+		
+		$data=[];
+
+		$where=$this->filter($request);
+
+		$support_category = SupportCategory::where("status","Active")->where("is_deleted","0")->get();
+		foreach ($support_category as $key=>$val){
+			$ticket_count = Enquiry::select(DB::RAW('status,count(status) as total'))->whereRAW($where)->where('category_id',$val->id)->groupby('status')->get();
+			$val->ticket_count=$ticket_count;
+			$data[]=$val;
+		}
+		return view('admin.support_category.dashboard', compact('active_query','data'));
+	}
+}

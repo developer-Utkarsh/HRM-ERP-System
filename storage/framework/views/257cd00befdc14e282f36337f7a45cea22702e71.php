@@ -1,0 +1,1 @@
+<?php /**PATH /var/www/html/laravel/resources/views/errors/404.blade.php ENDPATH**/ ?>
