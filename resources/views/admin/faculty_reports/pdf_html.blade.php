@@ -76,6 +76,7 @@
 					<th style='text-align:center;'>Spent Time</th>
 					<th style='text-align:center;font-size:12px'>Date</th>
 					<th style='text-align:center;font-size:12px'>Topic</th>
+					<th style='text-align:center;font-size:12px'>Uniform</th>
 					<th style='text-align:center;font-size:12px'>Remark</th>
 						
 						
@@ -120,7 +121,7 @@
 											  
 					if(!empty($get_faculty_value->faculty_name)){
 					$get_faculty_timetable = DB::table('timetables')
-											  ->select('timetables.*','studios.name as studios_name','branches.name as branches_name','branches.id as branches_id','batch.name as batch_name','course.name as course_name','subject.name as subject_name','chapter.name as chapter_name','start_classes.status as start_classes_status','start_classes.start_time as start_classes_start_time','start_classes.end_time as start_classes_end_time','users_assistant.name as assistant_name','users_assistant.mobile as assistant_mobile','start_classes.remark','start_classes.topic_name')
+											  ->select('timetables.*','studios.name as studios_name','branches.name as branches_name','branches.id as branches_id','batch.name as batch_name','course.name as course_name','subject.name as subject_name','chapter.name as chapter_name','start_classes.status as start_classes_status','start_classes.start_time as start_classes_start_time','start_classes.end_time as start_classes_end_time','users_assistant.name as assistant_name','users_assistant.mobile as assistant_mobile','start_classes.remark','start_classes.topic_name','start_classes.is_faculty_uniform')
 											  ->leftJoin('studios', 'studios.id', '=', 'timetables.studio_id')
 											  ->leftJoin('branches', 'branches.id', '=', 'studios.branch_id')
 											  ->leftJoin('batch', 'batch.id', '=', 'timetables.batch_id')
@@ -258,6 +259,9 @@
 						<td style="font-size:12px"><?php echo isset($get_faculty_timetable_value->cdate) ?  date('d-m-Y',strtotime($get_faculty_timetable_value->cdate)) : '' ?></td>
 						<td style="font-size:12px">
 						<?php echo isset($get_faculty_timetable_value->topic_name) ?  $get_faculty_timetable_value->topic_name : '' ?>
+						</td>
+						<td style="font-size:12px">
+							<?php echo isset($get_faculty_timetable_value->is_faculty_uniform) ?  'Yes': 'No' ?>
 						</td>
 						<td style="font-size:12px"><?php echo isset($get_faculty_timetable_value->remark) ?  $get_faculty_timetable_value->remark : '' ?></td>
 							

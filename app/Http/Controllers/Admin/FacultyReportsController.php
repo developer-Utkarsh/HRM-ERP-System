@@ -1045,6 +1045,7 @@ class FacultyReportsController extends Controller
 			$s_time       = ''; 
 			$t_time       = '';
 			$t_topic_name = '';
+			$is_faculty_uniform = 0;
 			$chapter_name = '';
 			$remark       = '';
 			$early_delay_reason = '';
@@ -1177,7 +1178,7 @@ class FacultyReportsController extends Controller
 								<div class='form-label-group'>
 									<span>Sub Topic - {$val->topic_id}</span>";
 								$t_topic_name .=$val->topic_name.",";
-					
+
 					$html .=	"<select class='form-control select-multiple1 d-none' name='topic_id[".$timetableData->course_id."][]' style='width:100%;'>
 										<option value='{$val->topic_id}'>{$val->topic_name}</option>
 									</select>
@@ -1423,6 +1424,9 @@ class FacultyReportsController extends Controller
 					$t_topic_name = $start_class_data->topic_name;
 				}
 
+				$is_faculty_uniform  = $start_class_data->is_faculty_uniform ;
+				
+
 				if(!empty($start_class_data->remark)){
 					$remark = $start_class_data->remark;
 				}
@@ -1497,7 +1501,8 @@ class FacultyReportsController extends Controller
 				$html = '';
 			}
 				
-			return response(['status' => true,'allow_edittime'=>$allow_edittime,'start_time' => $s_time, 'end_time' => $t_time, 'topic_name' => $t_topic_name,'chapter_name' => $chapter_name, 'remark' => $remark,'early_delay_reason' => $early_delay_reason, 'res' => $res,'total_spent_time'=>$total_spent_time,'html'=>$html,'subject_name'=>$subject_name,'planner'=>$planner,"planer_not_batch"=>$planer_not_batch,"chapter_id"=>$chapter_id], 200);
+
+			return response(['status' => true,'allow_edittime'=>$allow_edittime,'start_time' => $s_time, 'end_time' => $t_time, 'topic_name' => $t_topic_name,'faculty_uniform' => $is_faculty_uniform,'chapter_name' => $chapter_name, 'remark' => $remark,'early_delay_reason' => $early_delay_reason, 'res' => $res,'total_spent_time'=>$total_spent_time,'html'=>$html,'subject_name'=>$subject_name,'planner'=>$planner,"planer_not_batch"=>$planer_not_batch,"chapter_id"=>$chapter_id], 200);
 		}
 	}  
 	
@@ -1507,6 +1512,7 @@ class FacultyReportsController extends Controller
 			'timetable_id' => 'required|numeric',
 			'start_time' => 'required',
 			'end_time' => 'required',
+			'faculty_uniform' => 'required',
 		];
       
 		$validator = Validator::make($request->all(),$rules);
@@ -1573,6 +1579,8 @@ class FacultyReportsController extends Controller
 			if (!is_array($rchapter_id)) {
 				$rchapter_id = [$rchapter_id];
 			}
+
+			$faculty_uniform = $request->faculty_uniform ?? 0;
 
 			$timetable_id = $request->timetable_id ?? 0;
 			$topic_history_json = [];
@@ -1655,6 +1663,7 @@ class FacultyReportsController extends Controller
 				'early_delay_reason'=> $request->early_delay_reason,
 				'delay_type'=> $request->delay_type,
 				'assistant_id' => $asst_id,
+				'is_faculty_uniform' => $faculty_uniform,
 				'created_at'   => date('Y-m-d H:i:s'),
 				'updated_at'   => date('Y-m-d H:i:s')
 			]);
@@ -1667,6 +1676,7 @@ class FacultyReportsController extends Controller
 				'early_delay_reason'=> $request->early_delay_reason,
 				'delay_type'=> $request->delay_type,
 				'assistant_id' => $asst_id,
+				'is_faculty_uniform' => $faculty_uniform,
 				'updated_at'   => date('Y-m-d H:i:s')	
 			]);
 		}

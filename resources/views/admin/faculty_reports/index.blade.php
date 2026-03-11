@@ -531,8 +531,19 @@
 								</div>
 							</div>
 
-							<!-- assistant assistantDropdown -->
 							<div class="col-md-12 col-12">
+    							<div>
+									<label class="form-label-group mb-0"><h6><b>Is the faculty in uniform?</b></h6></label>
+    							    <select name="faculty_uniform" class="form-control select2" id="faculty_uniform">
+    							        <option value="">Select</option>
+    							        <option value="1">Yes</option>
+    							        <option value="0">No</option>
+    							    </select>
+    							</div>								
+							</div>
+
+							<!-- assistant assistantDropdown -->
+							<div class="col-md-12 col-12  pt-1">
     							<div>
 									<label class="form-label-group mb-0"><h6><b>Select your name (Optional)</b></h6></label>
     							    <select name="assistantID" class="form-control select2" id="assistantDropdown">
@@ -794,7 +805,10 @@
                     }
 
 					$('.topic_name').val(data.topic_name);
-					$('.topic_name').val(data.chapter_name);
+
+					$('#faculty_uniform').val(data.faculty_uniform);
+					
+					//$('.topic_name').val(data.chapter_name);
 					$('.chapter_id').val(data.chapter_id);
 					$('.remark').val(data.remark);
 					$('.early_delay_reason').val(data.early_delay_reason);
@@ -950,6 +964,9 @@
 		ignore: [],
 		rules: {
 			topic_name : {
+				required: true,
+			},
+			faculty_uniform : {
 				required: true,
 			},
 			start_time : {
